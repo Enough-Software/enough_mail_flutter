@@ -1,6 +1,6 @@
 # enough_mail_flutter
 
-Flutter UI widgets for mail apps.
+Flutter widgets for mail apps.
 
 
 ## Usage
