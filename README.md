@@ -1,12 +1,15 @@
 # enough_mail_flutter
 
-Flutter UI components for mail apps.
+Flutter UI widgets for mail apps.
 
 
 ## Usage
-The current `enough_mail_flutter` package provides the `MimeMessageViewer` component that displays email contents within an embedded `WebView`.
+The current `enough_mail_flutter` package the following widgets:
+*  `MimeMessageViewer` to display emails for which the contents has been already downloaded.
+* `MimeMessageDownloader` to download message contents first if required - then uses the `MimeMessageViewer` to display. 
 
-A simple usage example:
+### MimeMessageViewer Usage
+Using the `MimeMessageViewer` is quite straight forward:
 
 ```dart
 import 'package:enough_mail/enough_mail.dart';
@@ -29,12 +32,36 @@ Future handleMailto(Uri mailto, MimeMessage mimeMessage) {
 
 ```
 
+### MimeMessageDownloader Usage
+The `MimeMessageDownloader` downloads the message contents first if required and then uses the `MimeMessageViewer` to display the contents.
+You can specify most of the `MimeMessageViewer` options also on the `MimeMessageDownloader`. Refer to the API documentation for other specific configuration options.
+
+The implementation assumes that the `size` and `envelope` information have been previously downloaded,
+e.g. using `MailClient.fetchMessages(fetchPreference: FetchPreference.envelope)`.
+
+```dart
+Widget buildViewerForMessage(MimeMessage mimeMessage, MailClient mailClient) {
+  return MimeMessageDownloader(
+    mimeMessage: mimeMessage,
+    mailClient: mailClient,
+    onDownloaded: onMessageDownloaded,
+    blockExternalImages: false,
+    mailtoDelegate: handleMailto,
+  );
+}
+
+void onMessageDownloaded(MimeMessage mimeMessage) {
+  // update other things to show eg attachment view, e.g.:
+  //setState(() {});
+}
+```
+
 ## Installation
 Add this dependency your pubspec.yaml file:
 
 ```
 dependencies:
-  enough_mail_flutter: ^0.1.0
+  enough_mail_flutter: ^0.2.0
 ```
 The latest version or `enough_mail_flutter` is [![enough_mail_flutter version](https://img.shields.io/pub/v/enough_mail_flutter.svg)](https://pub.dartlang.org/packages/enough_mail_flutter).
 
