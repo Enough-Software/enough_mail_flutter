@@ -9,6 +9,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final MailClient mailClient;
   final int maxDownloadSize;
   final String downloadErrorMessage;
+  final bool markAsSeen;
   final void Function(MimeMessage message) onDownloaded;
   final bool adjustHeight;
   final bool blockExternalImages;
@@ -16,36 +17,29 @@ class MimeMessageDownloader extends StatefulWidget {
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
 
   /// Creates a new message downloader widget
+  /// [mimeMessage] The mime message which may not be downloaded yet.
+  /// [mailClient] The initialized `MailClient` instance for downloading
+  /// [maxDownloadSize] The maximum size in bytes of messages that are fully downloaded. The defaults to `128*1024` / `128kb`.
+  /// When the message size is bigger, only inline parts are downloaded - at least over IMAP. Use `null` to download
+  /// the complete message no matter what the message size is.
+  /// [downloadErrorMessage] The shown error message when the message cannot be downloaded
+  /// Set [markAsSeen] to `true` to automatically mark a message with the `\Seen` flag when it is being downloaded.
+  /// [onDownloaded] Optionally specify a callback to notify about a successful download.
+  /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
+  /// [blockExternalImages] Should external images be prevented from loaded? This defaults to `false`.
+  /// [emptyMessageText] The default text that should be shown for empty messages.
+  /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   MimeMessageDownloader({
     Key key,
-
-    /// The mime message which may not be downloaded yet.
     @required this.mimeMessage,
-
-    /// The initialized mail client
     @required this.mailClient,
-
-    /// The maximum size in bytes of messages that are fully downloaded. The defaults to `128*1024` / `128kb`.
-    /// When the message size is bigger, only inline parts are downloaded - at least over IMAP. Use `null` to download
-    /// the complete message no matter what the message size is.
     this.maxDownloadSize = 128 * 1024,
-
-    /// The shown error message when the message cannot be downloaded
     this.downloadErrorMessage = 'Unable to download message.',
-
-    /// A callback to notify about a successful download
+    this.markAsSeen,
     this.onDownloaded,
-
-    /// Should the webview measure itself and adapt its size? This defaults to `true`.
     this.adjustHeight = true,
-
-    /// Should external images be prevented from loaded? This defaults to `false`.
     this.blockExternalImages = false,
-
-    /// The default text that should be shown for empty messages.
     this.emptyMessageText,
-
-    /// Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
     this.mailtoDelegate,
   }) : super(key: key);
 
@@ -98,8 +92,8 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   }
 
   Future<MimeMessage> downloadMessageContents() async {
-    var mimeResponse = await widget.mailClient
-        .fetchMessageContents(mimeMessage, maxSize: widget.maxDownloadSize);
+    var mimeResponse = await widget.mailClient.fetchMessageContents(mimeMessage,
+        maxSize: widget.maxDownloadSize, markAsSeen: widget.markAsSeen);
     if (mimeResponse.isOkStatus) {
       mimeMessage = mimeResponse.result;
       if (widget.onDownloaded != null) {

@@ -46,6 +46,7 @@ Widget buildViewerForMessage(MimeMessage mimeMessage, MailClient mailClient) {
     mailClient: mailClient,
     onDownloaded: onMessageDownloaded,
     blockExternalImages: false,
+    markAsSeen: true,
     mailtoDelegate: handleMailto,
   );
 }
@@ -61,7 +62,7 @@ Add this dependency your pubspec.yaml file:
 
 ```
 dependencies:
-  enough_mail_flutter: ^0.2.0
+  enough_mail_flutter: ^0.3.0
 ```
 The latest version or `enough_mail_flutter` is [![enough_mail_flutter version](https://img.shields.io/pub/v/enough_mail_flutter.svg)](https://pub.dartlang.org/packages/enough_mail_flutter).
 
