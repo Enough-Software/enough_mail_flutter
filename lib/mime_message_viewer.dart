@@ -19,25 +19,19 @@ class MimeMessageViewer extends StatefulWidget {
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
 
   /// Creates a new mime message viewer
+  /// [mimeMessage] The message with loaded message contents.
+  /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
+  /// [blockExternalImages]  Should external images be prevented from loaded? This defaults to `false`.
+  /// [emptyMessageText] The default text that should be shown for empty messages.
+  /// [navigationDelegate] Browser navigation delegate in case the implementation wants to take over full control about links.
+  /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   MimeMessageViewer({
     Key key,
-
-    /// The message with loaded message contents.
     @required this.mimeMessage,
-
-    /// Should the webview measure itself and adapt its size? This defaults to `true`.
     this.adjustHeight = true,
-
-    /// Should external images be prevented from loaded? This defaults to `false`.
     this.blockExternalImages = false,
-
-    /// The default text that should be shown for empty messages.
     this.emptyMessageText,
-
-    /// Browser navigation delegate in case the implementation wants to take over full control about links.
     this.navigationDelegate,
-
-    /// Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
     this.mailtoDelegate,
   }) : super(key: key);
 
