@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:photo_view/photo_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
@@ -36,10 +39,16 @@ class MimeMessageViewer extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _MimeMessageViewerState createState() => _MimeMessageViewerState();
+  State<MimeMessageViewer> createState() {
+    if (mimeMessage.mediaType?.isImage == true) {
+      return _ImageViewerState();
+    } else {
+      return _HtmlViewerState();
+    }
+  }
 }
 
-class _MimeMessageViewerState extends State<MimeMessageViewer> {
+class _HtmlViewerState extends State<MimeMessageViewer> {
   double _screenHeight;
   WebViewController _webViewController;
   double _webViewHeight;
@@ -124,5 +133,53 @@ class _MimeMessageViewerState extends State<MimeMessageViewer> {
     } else {
       return NavigationDecision.navigate;
     }
+  }
+}
+
+/// State for a message with  `Content-Type: image/XXX`
+class _ImageViewerState extends State<MimeMessageViewer> {
+  bool showFullScreen = false;
+  Uint8List imageData;
+
+  @override
+  void initState() {
+    imageData = widget.mimeMessage.decodeContentBinary();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (showFullScreen) {
+      final screenHeight = MediaQuery.of(context).size.height;
+      return WillPopScope(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (!constraints.hasBoundedHeight) {
+              constraints = constraints.copyWith(maxHeight: screenHeight);
+            }
+            return ConstrainedBox(
+              constraints: constraints,
+              child: buildPhotoView(),
+            );
+          },
+        ),
+        onWillPop: () {
+          setState(() => showFullScreen = false);
+          return Future.value(false);
+        },
+      );
+    } else {
+      return FlatButton(
+          onPressed: () => setState(() => showFullScreen = true),
+          child: Image.memory(imageData));
+    }
+  }
+
+  Widget buildPhotoView() {
+    final imageData = widget.mimeMessage.decodeContentBinary();
+    return PhotoView(
+      imageProvider: MemoryImage(imageData),
+      basePosition: Alignment.topCenter,
+    );
   }
 }

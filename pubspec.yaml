@@ -10,18 +10,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  enough_mail: #^0.0.35
+  enough_mail: #^0.0.36
     git:
       url: https://github.com/Enough-Software/enough_mail.git
       ref: main
-    #path: ../enough_mail
+    # path: ../enough_mail
   enough_mail_html: #^0.1.0
     git:
       url: https://github.com/Enough-Software/enough_mail_html.git
       ref: main
-    #path: ../enough_mail_html
+    # path: ../enough_mail_html
   webview_flutter: ^1.0.7
   url_launcher: ^5.7.10
+  photo_view: ^0.10.3
 
 
 dev_dependencies:
