@@ -11,6 +11,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final String downloadErrorMessage;
   final bool markAsSeen;
   final void Function(MimeMessage message) onDownloaded;
+  final void Function(MailException e) onDownloadError;
   final bool adjustHeight;
   final bool blockExternalImages;
   final String emptyMessageText;
@@ -37,6 +38,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.downloadErrorMessage = 'Unable to download message.',
     this.markAsSeen,
     this.onDownloaded,
+    this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.emptyMessageText,
@@ -92,12 +94,16 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   }
 
   Future<MimeMessage> downloadMessageContents() async {
-    var mimeResponse = await widget.mailClient.fetchMessageContents(mimeMessage,
-        maxSize: widget.maxDownloadSize, markAsSeen: widget.markAsSeen);
-    if (mimeResponse.isOkStatus) {
-      mimeMessage = mimeResponse.result;
+    try {
+      mimeMessage = await widget.mailClient.fetchMessageContents(mimeMessage,
+          maxSize: widget.maxDownloadSize, markAsSeen: widget.markAsSeen);
       if (widget.onDownloaded != null) {
         widget.onDownloaded(mimeMessage);
+      }
+    } on MailException catch (e) {
+      print('Unable to download message ${mimeMessage.decodeSubject()}: $e');
+      if (widget.onDownloadError != null) {
+        widget.onDownloadError(e);
       }
     }
     return mimeMessage;
