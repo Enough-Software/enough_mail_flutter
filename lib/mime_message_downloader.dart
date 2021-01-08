@@ -51,18 +51,22 @@ class MimeMessageDownloader extends StatefulWidget {
 
 class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   MimeMessage mimeMessage;
+  Future<MimeMessage> downloader;
 
   @override
   void initState() {
     mimeMessage = widget.mimeMessage;
+    if (!mimeMessage.isDownloaded) {
+      downloader = downloadMessageContents();
+    }
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!mimeMessage.isDownloaded) {
-      return FutureBuilder(
-        future: downloadMessageContents(),
+      return FutureBuilder<MimeMessage>(
+        future: downloader,
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.none:
@@ -101,9 +105,10 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
         widget.onDownloaded(mimeMessage);
       }
     } on MailException catch (e) {
-      print('Unable to download message ${mimeMessage.decodeSubject()}: $e');
       if (widget.onDownloadError != null) {
         widget.onDownloadError(e);
+      } else {
+        print('Unable to download message ${mimeMessage.decodeSubject()}: $e');
       }
     }
     return mimeMessage;
