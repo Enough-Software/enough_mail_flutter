@@ -8,6 +8,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final MimeMessage mimeMessage;
   final MailClient mailClient;
   final int maxDownloadSize;
+  final int maxImageWidth;
   final String downloadErrorMessage;
   final bool markAsSeen;
   final void Function(MimeMessage message) onDownloaded;
@@ -23,6 +24,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [maxDownloadSize] The maximum size in bytes of messages that are fully downloaded. The defaults to `128*1024` / `128kb`.
   /// When the message size is bigger, only inline parts are downloaded - at least over IMAP. Use `null` to download
   /// the complete message no matter what the message size is.
+  /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   /// [downloadErrorMessage] The shown error message when the message cannot be downloaded
   /// Set [markAsSeen] to `true` to automatically mark a message with the `\Seen` flag when it is being downloaded.
   /// [onDownloaded] Optionally specify a callback to notify about a successful download.
@@ -35,6 +37,7 @@ class MimeMessageDownloader extends StatefulWidget {
     @required this.mimeMessage,
     @required this.mailClient,
     this.maxDownloadSize = 128 * 1024,
+    this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
     this.markAsSeen,
     this.onDownloaded,
@@ -94,6 +97,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       blockExternalImages: widget.blockExternalImages,
       emptyMessageText: widget.emptyMessageText,
       mailtoDelegate: widget.mailtoDelegate,
+      maxImageWidth: widget.maxImageWidth,
     );
   }
 

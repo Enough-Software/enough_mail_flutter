@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 /// Viewer for mime message contents
 class MimeMessageViewer extends StatefulWidget {
   final MimeMessage mimeMessage;
+  final int maxImageWidth;
   final bool adjustHeight;
   final bool blockExternalImages;
   final String emptyMessageText;
@@ -28,6 +29,7 @@ class MimeMessageViewer extends StatefulWidget {
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [navigationDelegate] Browser navigation delegate in case the implementation wants to take over full control about links.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
+  /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   MimeMessageViewer({
     Key key,
     @required this.mimeMessage,
@@ -36,6 +38,7 @@ class MimeMessageViewer extends StatefulWidget {
     this.emptyMessageText,
     this.navigationDelegate,
     this.mailtoDelegate,
+    this.maxImageWidth,
   }) : super(key: key);
 
   @override
@@ -62,9 +65,12 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   }
 
   void generateHtml(bool blockExternalImages) {
+    _wereExternalImagesBlocked = blockExternalImages;
     final html = widget.mimeMessage.transformToHtml(
-        blockExternalImages: blockExternalImages,
-        emptyMessageText: widget.emptyMessageText);
+      blockExternalImages: blockExternalImages,
+      emptyMessageText: widget.emptyMessageText,
+      maxImageWidth: widget.maxImageWidth,
+    );
     _base64EncodedHtml = 'data:text/html;base64,' +
         base64Encode(const Utf8Encoder().convert(html));
   }
