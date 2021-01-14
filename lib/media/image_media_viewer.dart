@@ -4,6 +4,7 @@ import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 
+/// Displays images
 class ImageMediaViewer extends StatefulWidget {
   final MimePart mimePart;
   final MediaType mediaType;
