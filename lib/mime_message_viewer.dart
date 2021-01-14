@@ -51,12 +51,22 @@ class MimeMessageViewer extends StatefulWidget {
   }
 }
 
+class _HtmlGenerationArguments {
+  final MimeMessage mimeMessage;
+  final bool blockExternalImages;
+  final String emptyMessageText;
+  final int maxImageWidth;
+  _HtmlGenerationArguments(this.mimeMessage, this.blockExternalImages,
+      this.emptyMessageText, this.maxImageWidth);
+}
+
 class _HtmlViewerState extends State<MimeMessageViewer> {
   double _screenHeight;
   WebViewController _webViewController;
   double _webViewHeight;
   String _base64EncodedHtml;
   bool _wereExternalImagesBlocked;
+  bool _isGenerating;
 
   @override
   void initState() {
@@ -64,19 +74,32 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     super.initState();
   }
 
-  void generateHtml(bool blockExternalImages) {
+  void generateHtml(bool blockExternalImages) async {
     _wereExternalImagesBlocked = blockExternalImages;
-    final html = widget.mimeMessage.transformToHtml(
-      blockExternalImages: blockExternalImages,
-      emptyMessageText: widget.emptyMessageText,
-      maxImageWidth: widget.maxImageWidth,
+    _isGenerating = true;
+    final args = _HtmlGenerationArguments(widget.mimeMessage,
+        blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
+    _base64EncodedHtml = await compute(_generateHtmlImpl, args);
+    setState(() {
+      _isGenerating = false;
+    });
+  }
+
+  static String _generateHtmlImpl(_HtmlGenerationArguments args) {
+    final html = args.mimeMessage.transformToHtml(
+      blockExternalImages: args.blockExternalImages,
+      emptyMessageText: args.emptyMessageText,
+      maxImageWidth: args.maxImageWidth,
     );
-    _base64EncodedHtml = 'data:text/html;base64,' +
+    return 'data:text/html;base64,' +
         base64Encode(const Utf8Encoder().convert(html));
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isGenerating) {
+      return Container(child: CircularProgressIndicator());
+    }
     _screenHeight = MediaQuery.of(context).size.height;
     if (widget.blockExternalImages != _wereExternalImagesBlocked) {
       generateHtml(widget.blockExternalImages);
