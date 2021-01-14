@@ -17,6 +17,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final bool blockExternalImages;
   final String emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
+  final Future Function(MediaViewer mediaViewer) showMediaDelegate;
 
   /// Creates a new message downloader widget
   /// [mimeMessage] The mime message which may not be downloaded yet.
@@ -32,6 +33,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [blockExternalImages] Should external images be prevented from loaded? This defaults to `false`.
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
+  /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   MimeMessageDownloader({
     Key key,
     @required this.mimeMessage,
@@ -46,6 +48,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.blockExternalImages = false,
     this.emptyMessageText,
     this.mailtoDelegate,
+    this.showMediaDelegate,
   }) : super(key: key);
 
   @override
@@ -97,6 +100,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       blockExternalImages: widget.blockExternalImages,
       emptyMessageText: widget.emptyMessageText,
       mailtoDelegate: widget.mailtoDelegate,
+      showMediaDelegate: widget.showMediaDelegate,
       maxImageWidth: widget.maxImageWidth,
     );
   }

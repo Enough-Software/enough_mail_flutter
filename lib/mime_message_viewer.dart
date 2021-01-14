@@ -3,10 +3,11 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
+import 'package:enough_mail_flutter/media/image_media_viewer.dart';
+import 'package:enough_mail_flutter/media_viewer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:photo_view/photo_view.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
@@ -21,6 +22,7 @@ class MimeMessageViewer extends StatefulWidget {
   final FutureOr<NavigationDecision> Function(NavigationRequest)
       navigationDelegate;
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
+  final Future Function(MediaViewer mediaViewer) showMediaDelegate;
 
   /// Creates a new mime message viewer
   /// [mimeMessage] The message with loaded message contents.
@@ -29,6 +31,7 @@ class MimeMessageViewer extends StatefulWidget {
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [navigationDelegate] Browser navigation delegate in case the implementation wants to take over full control about links.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
+  /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   MimeMessageViewer({
     Key key,
@@ -38,6 +41,7 @@ class MimeMessageViewer extends StatefulWidget {
     this.emptyMessageText,
     this.navigationDelegate,
     this.mailtoDelegate,
+    this.showMediaDelegate,
     this.maxImageWidth,
   }) : super(key: key);
 
@@ -67,6 +71,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   String _base64EncodedHtml;
   bool _wereExternalImagesBlocked;
   bool _isGenerating;
+  Widget _mediaView;
 
   @override
   void initState() {
@@ -97,6 +102,17 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
 
   @override
   Widget build(BuildContext context) {
+    if (_mediaView != null) {
+      return WillPopScope(
+        child: _mediaView,
+        onWillPop: () {
+          setState(() {
+            _mediaView = null;
+          });
+          return Future.value(false);
+        },
+      );
+    }
     if (_isGenerating) {
       return Container(child: CircularProgressIndicator());
     }
@@ -156,6 +172,22 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       await widget.mailtoDelegate(mailto, widget.mimeMessage);
       return NavigationDecision.prevent;
     }
+    if (request.url.startsWith('cid://')) {
+      // show inline part:
+      final cid = request.url.substring('cid://'.length);
+      final part = widget.mimeMessage.getPartWithContentId(cid);
+      if (part != null) {
+        final mediaView = MediaViewer(widget.mimeMessage, part, part.mediaType);
+        if (widget.showMediaDelegate != null) {
+          widget.showMediaDelegate(mediaView);
+        } else {
+          setState(() {
+            _mediaView = mediaView;
+          });
+        }
+      }
+      return NavigationDecision.prevent;
+    }
     if (await launcher.canLaunch(request.url)) {
       await launcher.launch(request.url);
       return NavigationDecision.prevent;
@@ -188,7 +220,10 @@ class _ImageViewerState extends State<MimeMessageViewer> {
             }
             return ConstrainedBox(
               constraints: constraints,
-              child: buildPhotoView(),
+              child: ImageMediaViewer(
+                mimePart: widget.mimeMessage,
+                mediaType: widget.mimeMessage.mediaType,
+              ),
             );
           },
         ),
@@ -199,16 +234,20 @@ class _ImageViewerState extends State<MimeMessageViewer> {
       );
     } else {
       return FlatButton(
-          onPressed: () => setState(() => showFullScreen = true),
+          onPressed: () {
+            if (widget.showMediaDelegate != null) {
+              widget.showMediaDelegate(
+                MediaViewer(
+                  widget.mimeMessage,
+                  widget.mimeMessage,
+                  widget.mimeMessage.mediaType,
+                ),
+              );
+            } else {
+              setState(() => showFullScreen = true);
+            }
+          },
           child: Image.memory(imageData));
     }
-  }
-
-  Widget buildPhotoView() {
-    final imageData = widget.mimeMessage.decodeContentBinary();
-    return PhotoView(
-      imageProvider: MemoryImage(imageData),
-      basePosition: Alignment.topCenter,
-    );
   }
 }
