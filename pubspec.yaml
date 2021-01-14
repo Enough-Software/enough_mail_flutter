@@ -23,6 +23,7 @@ dependencies:
   webview_flutter: ^1.0.7
   url_launcher: ^5.7.10
   photo_view: ^0.10.3
+  syncfusion_flutter_pdfviewer: ^18.4.34-beta
 
 
 dev_dependencies:

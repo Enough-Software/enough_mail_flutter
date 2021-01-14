@@ -1,6 +1,7 @@
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_mail_flutter/media/image_media_viewer.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:enough_mail_flutter/media/pdf_media_viewer.dart';
+import 'package:flutter/material.dart';
 
 /// Base abstraction for any media viewer
 class MediaViewer extends StatelessWidget {
@@ -13,10 +14,11 @@ class MediaViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (mediaType.isImage) {
-      return ImageMediaViewer(
-          mimePart: this.mimePart, mediaType: this.mediaType);
+      return ImageMediaViewer(mimePart: mimePart, mediaType: mediaType);
+    } else if (mediaType.sub == MediaSubtype.applicationPdf) {
+      return PdfMediaViewer(mimePart: mimePart, mediaType: mediaType);
     } else if (mediaType.isText) {
-      return Text(mimePart.decodeContentText());
+      return SelectableText(mimePart.decodeContentText());
     } else {
       return Text('Unsupported content with media type ${mediaType.text}');
     }
