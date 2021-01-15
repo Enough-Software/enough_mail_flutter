@@ -8,7 +8,8 @@ import 'package:photo_view/photo_view.dart';
 class ImageMediaViewer extends StatefulWidget {
   final MimePart mimePart;
   final MediaType mediaType;
-  ImageMediaViewer({Key key, this.mimePart, this.mediaType}) : super(key: key);
+  ImageMediaViewer({Key key, @required this.mimePart, @required this.mediaType})
+      : super(key: key);
 
   @override
   _ImageMediaViewerState createState() => _ImageMediaViewerState();

@@ -9,7 +9,8 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 class PdfMediaViewer extends StatefulWidget {
   final MimePart mimePart;
   final MediaType mediaType;
-  PdfMediaViewer({Key key, this.mimePart, this.mediaType}) : super(key: key);
+  PdfMediaViewer({Key key, @required this.mimePart, @required this.mediaType})
+      : super(key: key);
 
   @override
   _PdfMediaViewerState createState() => _PdfMediaViewerState();
