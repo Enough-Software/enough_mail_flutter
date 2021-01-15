@@ -1,4 +1,5 @@
 import 'package:enough_mail/enough_mail.dart';
+import 'package:enough_mail_flutter/media/audio_media_viewer.dart';
 import 'package:enough_mail_flutter/media/image_media_viewer.dart';
 import 'package:enough_mail_flutter/media/pdf_media_viewer.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,8 @@ class MediaViewer extends StatelessWidget {
       return ImageMediaViewer(mimePart: mimePart, mediaType: mediaType);
     } else if (mediaType.sub == MediaSubtype.applicationPdf) {
       return PdfMediaViewer(mimePart: mimePart, mediaType: mediaType);
+    } else if (mediaType.isAudio) {
+      return AudioMediaViewer(mimePart: mimePart, mediaType: mediaType);
     } else if (mediaType.isText) {
       return SelectableText(mimePart.decodeContentText());
     } else {
