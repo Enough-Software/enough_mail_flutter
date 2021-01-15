@@ -21,7 +21,10 @@ class MediaViewer extends StatelessWidget {
     } else if (mediaType.isAudio) {
       return AudioMediaViewer(mimePart: mimePart, mediaType: mediaType);
     } else if (mediaType.isText) {
-      return SelectableText(mimePart.decodeContentText());
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SelectableText(mimePart.decodeContentText()),
+      );
     } else {
       return Text('Unsupported content with media type ${mediaType.text}');
     }
