@@ -28,10 +28,7 @@ class _AudioMediaViewerState extends State<AudioMediaViewer> {
   @override
   void initState() {
     audioData = widget.mimePart.decodeContentBinary();
-    name = MailCodec.decodeHeader(
-            widget.mimePart.getHeaderContentDisposition()?.filename ??
-                widget.mimePart.getHeaderContentType()?.parameters['name']) ??
-        '<unknown>';
+    name = widget.mimePart.decodeFileName() ?? '<unknown>';
     track = Track(dataBuffer: audioData, trackTitle: name);
     super.initState();
   }
