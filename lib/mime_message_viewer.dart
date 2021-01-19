@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
-import 'package:enough_mail_flutter/media/image_media_viewer.dart';
-import 'package:enough_mail_flutter/media_viewer.dart';
+import 'package:enough_mail_flutter/enough_mail_flutter.dart';
+import 'package:enough_mail_flutter/mime_media_provider.dart';
+import 'package:enough_media/enough_media.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -22,7 +23,7 @@ class MimeMessageViewer extends StatefulWidget {
   final FutureOr<NavigationDecision> Function(NavigationRequest)
       navigationDelegate;
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
-  final Future Function(MediaViewer mediaViewer) showMediaDelegate;
+  final Future Function(InteractiveMediaWidget mediaViewer) showMediaDelegate;
 
   /// Creates a new mime message viewer
   /// [mimeMessage] The message with loaded message contents.
@@ -177,12 +178,15 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       final cid = request.url.substring('cid://'.length);
       final part = widget.mimeMessage.getPartWithContentId(cid);
       if (part != null) {
-        final mediaView = MediaViewer(widget.mimeMessage, part, part.mediaType);
+        final mediaProvider = MimeMediaProviderFactory.fromMime(part);
+        final mediaWidget = InteractiveMediaWidget(
+          mediaProvider: mediaProvider,
+        );
         if (widget.showMediaDelegate != null) {
-          widget.showMediaDelegate(mediaView);
+          widget.showMediaDelegate(mediaWidget);
         } else {
           setState(() {
-            _mediaView = mediaView;
+            _mediaView = mediaWidget;
           });
         }
       }
@@ -220,10 +224,9 @@ class _ImageViewerState extends State<MimeMessageViewer> {
             }
             return ConstrainedBox(
               constraints: constraints,
-              child: ImageMediaViewer(
-                mimePart: widget.mimeMessage,
-                mediaType: widget.mimeMessage.mediaType,
-              ),
+              child: ImageInteractiveMedia(
+                  mediaProvider:
+                      MimeMediaProviderFactory.fromMime(widget.mimeMessage)),
             );
           },
         ),
@@ -233,21 +236,20 @@ class _ImageViewerState extends State<MimeMessageViewer> {
         },
       );
     } else {
-      return FlatButton(
-          onPressed: () {
-            if (widget.showMediaDelegate != null) {
-              widget.showMediaDelegate(
-                MediaViewer(
-                  widget.mimeMessage,
-                  widget.mimeMessage,
-                  widget.mimeMessage.mediaType,
-                ),
-              );
-            } else {
-              setState(() => showFullScreen = true);
-            }
-          },
-          child: Image.memory(imageData));
+      return TextButton(
+        onPressed: () {
+          if (widget.showMediaDelegate != null) {
+            final mediaProvider =
+                MimeMediaProviderFactory.fromMime(widget.mimeMessage);
+            final mediaWidget =
+                InteractiveMediaWidget(mediaProvider: mediaProvider);
+            widget.showMediaDelegate(mediaWidget);
+          } else {
+            setState(() => showFullScreen = true);
+          }
+        },
+        child: Image.memory(imageData),
+      );
     }
   }
 }

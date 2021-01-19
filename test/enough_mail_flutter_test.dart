@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:enough_mail_flutter/enough_mail_flutter.dart';
+//import 'package:enough_mail_flutter/enough_mail_flutter.dart';
 
 //TODO create tests
 void main() {

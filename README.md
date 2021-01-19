@@ -65,10 +65,6 @@ dependencies:
   enough_mail_flutter: ^0.3.0
   webview_flutter: ^1.0.7
   url_launcher: ^5.7.10
-  # requrired for displaying media:
-  photo_view: ^0.10.3
-  syncfusion_flutter_pdfviewer: ^18.4.34-beta
-  flutter_sound_lite: ^7.5.1+2
 ```
 The latest version or `enough_mail_flutter` is [![enough_mail_flutter version](https://img.shields.io/pub/v/enough_mail_flutter.svg)](https://pub.dartlang.org/packages/enough_mail_flutter).
 

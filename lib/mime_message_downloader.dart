@@ -1,5 +1,6 @@
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_mail_flutter/enough_mail_flutter.dart';
+import 'package:enough_media/enough_media.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
@@ -17,7 +18,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final bool blockExternalImages;
   final String emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
-  final Future Function(MediaViewer mediaViewer) showMediaDelegate;
+  final Future Function(InteractiveMediaWidget mediaWidget) showMediaDelegate;
 
   /// Creates a new message downloader widget
   /// [mimeMessage] The mime message which may not be downloaded yet.
