@@ -178,7 +178,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       final cid = request.url.substring('cid://'.length);
       final part = widget.mimeMessage.getPartWithContentId(cid);
       if (part != null) {
-        final mediaProvider = MimeMediaProviderFactory.fromMime(part);
+        final mediaProvider =
+            MimeMediaProviderFactory.fromMime(widget.mimeMessage, part);
         final mediaWidget = InteractiveMediaWidget(
           mediaProvider: mediaProvider,
         );
@@ -225,8 +226,8 @@ class _ImageViewerState extends State<MimeMessageViewer> {
             return ConstrainedBox(
               constraints: constraints,
               child: ImageInteractiveMedia(
-                  mediaProvider:
-                      MimeMediaProviderFactory.fromMime(widget.mimeMessage)),
+                  mediaProvider: MimeMediaProviderFactory.fromMime(
+                      widget.mimeMessage, widget.mimeMessage)),
             );
           },
         ),
@@ -239,8 +240,8 @@ class _ImageViewerState extends State<MimeMessageViewer> {
       return TextButton(
         onPressed: () {
           if (widget.showMediaDelegate != null) {
-            final mediaProvider =
-                MimeMediaProviderFactory.fromMime(widget.mimeMessage);
+            final mediaProvider = MimeMediaProviderFactory.fromMime(
+                widget.mimeMessage, widget.mimeMessage);
             final mediaWidget =
                 InteractiveMediaWidget(mediaProvider: mediaProvider);
             widget.showMediaDelegate(mediaWidget);
