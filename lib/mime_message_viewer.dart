@@ -86,9 +86,11 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     final args = _HtmlGenerationArguments(widget.mimeMessage,
         blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
     _base64EncodedHtml = await compute(_generateHtmlImpl, args);
-    setState(() {
-      _isGenerating = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isGenerating = false;
+      });
+    }
   }
 
   static String _generateHtmlImpl(_HtmlGenerationArguments args) {
@@ -154,7 +156,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               var scrollHeightText = await _webViewController
                   .evaluateJavascript('document.body.scrollHeight');
               double height = double.tryParse(scrollHeightText);
-              if ((height != null)) {
+              if ((height != null) && mounted) {
                 // && (height < screenHeight)) {
                 // allow to scroll webpages further than the screen height, this
                 // can lead to crashes but we have to live with that for the moment,
