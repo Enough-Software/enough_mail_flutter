@@ -108,16 +108,24 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
 
   Future<MimeMessage> downloadMessageContents() async {
     try {
+      // print('download message UID ${mimeMessage.uid} for state $this');
       mimeMessage = await widget.mailClient.fetchMessageContents(mimeMessage,
           maxSize: widget.maxDownloadSize, markAsSeen: widget.markAsSeen);
       if (widget.onDownloaded != null) {
         widget.onDownloaded(mimeMessage);
       }
-    } on MailException catch (e) {
+    } on MailException catch (e, s) {
       if (widget.onDownloadError != null) {
         widget.onDownloadError(e);
       } else {
         print('Unable to download message ${mimeMessage.decodeSubject()}: $e');
+      }
+    } catch (e, s) {
+      print(
+          'unexpected exception while downloading message with UID ${mimeMessage.uid} / ID ${mimeMessage.sequenceId}: $e $s');
+      if (widget.onDownloadError != null) {
+        widget.onDownloadError(MailException(widget.mailClient, e.toString(),
+            stackTrace: s, details: e));
       }
     }
     return mimeMessage;
