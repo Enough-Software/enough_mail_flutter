@@ -13,18 +13,15 @@ dependencies:
   enough_mail: #^0.1.0
     git:
       url: https://github.com/Enough-Software/enough_mail.git
-      ref: main
     # path: ../enough_mail
   enough_mail_html: #^0.2.1
     git:
       url: https://github.com/Enough-Software/enough_mail_html.git
-      ref: main
     # path: ../enough_mail_html
   webview_flutter: ^1.0.7
   enough_media: #^0.1.0
     git:
       url: https://github.com/Enough-Software/enough_media.git
-      ref: main   
     # path: ../enough_media
   url_launcher: ^5.7.10
 
