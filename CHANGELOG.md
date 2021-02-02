@@ -1,3 +1,9 @@
+## [0.3.0] - 2021-02-02.
+* Generate HTML asynchronously.
+* Catch any problems during downloading and signal them to the widget owner with the `onDownloadError` handler.
+* Use `enough_media` package to render media.
+* Fix problem when `setState()` was called after the widget was not mounted anymore.
+
 ## [0.2.1] - 2021-01-11.
 * Download messages only once.
 * Show an image message directly and not in HTML browser.
