@@ -118,7 +118,8 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       if (widget.onDownloadError != null) {
         widget.onDownloadError(e);
       } else {
-        print('Unable to download message ${mimeMessage.decodeSubject()}: $e');
+        print(
+            'Unable to download message ${mimeMessage.decodeSubject()}: $e $s');
       }
     } catch (e, s) {
       print(
