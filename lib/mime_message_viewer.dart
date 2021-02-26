@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
@@ -9,7 +10,7 @@ import 'package:enough_media/enough_media.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
@@ -20,17 +21,15 @@ class MimeMessageViewer extends StatefulWidget {
   final bool adjustHeight;
   final bool blockExternalImages;
   final String emptyMessageText;
-  final FutureOr<NavigationDecision> Function(NavigationRequest)
-      navigationDelegate;
   final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
   final Future Function(InteractiveMediaWidget mediaViewer) showMediaDelegate;
 
   /// Creates a new mime message viewer
+  ///
   /// [mimeMessage] The message with loaded message contents.
   /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
   /// [blockExternalImages]  Should external images be prevented from loaded? This defaults to `false`.
   /// [emptyMessageText] The default text that should be shown for empty messages.
-  /// [navigationDelegate] Browser navigation delegate in case the implementation wants to take over full control about links.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
@@ -40,7 +39,6 @@ class MimeMessageViewer extends StatefulWidget {
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.emptyMessageText,
-    this.navigationDelegate,
     this.mailtoDelegate,
     this.showMediaDelegate,
     this.maxImageWidth,
@@ -66,13 +64,12 @@ class _HtmlGenerationArguments {
 }
 
 class _HtmlViewerState extends State<MimeMessageViewer> {
-  double _screenHeight;
-  WebViewController _webViewController;
-  double _webViewHeight;
   String _base64EncodedHtml;
   bool _wereExternalImagesBlocked;
   bool _isGenerating;
   Widget _mediaView;
+
+  double _webViewHeight;
 
   @override
   void initState() {
@@ -119,61 +116,68 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     if (_isGenerating) {
       return Container(child: CircularProgressIndicator());
     }
-    _screenHeight = MediaQuery.of(context).size.height;
     if (widget.blockExternalImages != _wereExternalImagesBlocked) {
       generateHtml(widget.blockExternalImages);
     }
+
     if (widget.adjustHeight) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          if (!constraints.hasBoundedHeight) {
-            constraints = constraints.copyWith(
-                maxHeight: _webViewHeight ?? _screenHeight);
-          }
-          return ConstrainedBox(
-            constraints: constraints,
-            child: buildWebVew(),
-          );
-        },
+      final size = MediaQuery.of(context).size;
+      return SizedBox(
+        height: _webViewHeight ?? size.height,
+        width: size.width,
+        child: buildWebView(),
       );
     } else {
-      return buildWebVew();
+      return buildWebView();
     }
   }
 
-  WebView buildWebVew() {
-    return WebView(
+  Widget buildWebView() {
+    return InAppWebView(
       key: ValueKey(_base64EncodedHtml),
-      javascriptMode: JavascriptMode.unrestricted,
       initialUrl: _base64EncodedHtml,
-      gestureRecognizers: null,
-      onWebViewCreated: (controller) {
-        _webViewController = controller;
-      },
-      navigationDelegate: widget.navigationDelegate ?? handleNavigationProcess,
-      onPageFinished: widget.adjustHeight
-          ? (url) async {
-              var scrollHeightText = await _webViewController
-                  .evaluateJavascript('document.body.scrollHeight');
-              double height = double.tryParse(scrollHeightText);
-              if ((height != null) && mounted) {
-                // && (height < screenHeight)) {
-                // allow to scroll webpages further than the screen height, this
-                // can lead to crashes but we have to live with that for the moment,
-                // until it is fixed by either Flutter or thewebview_flutter plugin
-                setState(() => _webViewHeight = height + 5);
+      initialOptions: InAppWebViewGroupOptions(
+        crossPlatform: InAppWebViewOptions(
+          useShouldOverrideUrlLoading: true,
+          verticalScrollBarEnabled: false,
+        ),
+        android: AndroidInAppWebViewOptions(
+          useWideViewPort: true,
+          loadWithOverviewMode: false,
+        ),
+      ),
+      onLoadStop: !widget.adjustHeight
+          ? null
+          : (controller, url) async {
+              int scrollHeight = await controller.evaluateJavascript(
+                  source: 'document.body.scrollHeight');
+              if (scrollHeight != null) {
+                if (Platform.isAndroid) {
+                  int scrollWidth = await controller.evaluateJavascript(
+                      source: 'document.body.scrollWidth');
+                  final size = MediaQuery.of(context).size;
+                  if (scrollWidth > size.width) {
+                    final scale = (size.width / scrollWidth);
+                    await controller.zoomBy(scale);
+                    scrollHeight = (scrollHeight * scale).ceil();
+                  }
+                }
+                setState(() {
+                  _webViewHeight = (scrollHeight + 10.0);
+                });
               }
-            }
-          : null,
+            },
+      shouldOverrideUrlLoading: shouldOverrideUrlLoading,
     );
   }
 
-  FutureOr<NavigationDecision> handleNavigationProcess(
-      NavigationRequest request) async {
+  Future<ShouldOverrideUrlLoadingAction> shouldOverrideUrlLoading(
+      InAppWebViewController controller,
+      ShouldOverrideUrlLoadingRequest request) async {
     if (widget.mailtoDelegate != null && request.url.startsWith('mailto:')) {
       final mailto = Uri.parse(request.url);
       await widget.mailtoDelegate(mailto, widget.mimeMessage);
-      return NavigationDecision.prevent;
+      return ShouldOverrideUrlLoadingAction.CANCEL;
     }
     if (request.url.startsWith('cid://')) {
       // show inline part:
@@ -193,13 +197,13 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
           });
         }
       }
-      return NavigationDecision.prevent;
+      return ShouldOverrideUrlLoadingAction.CANCEL;
     }
     if (await launcher.canLaunch(request.url)) {
       await launcher.launch(request.url);
-      return NavigationDecision.prevent;
+      return ShouldOverrideUrlLoadingAction.CANCEL;
     } else {
-      return NavigationDecision.navigate;
+      return ShouldOverrideUrlLoadingAction.ALLOW;
     }
   }
 }

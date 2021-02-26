@@ -21,6 +21,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final Future Function(InteractiveMediaWidget mediaWidget) showMediaDelegate;
 
   /// Creates a new message downloader widget
+  ///
   /// [mimeMessage] The mime message which may not be downloaded yet.
   /// [mailClient] The initialized `MailClient` instance for downloading
   /// [maxDownloadSize] The maximum size in bytes of messages that are fully downloaded. The defaults to `128*1024` / `128kb`.

@@ -22,7 +22,7 @@ dependencies:
     git:
       url: https://github.com/Enough-Software/enough_media.git
     # path: ../enough_media
-  webview_flutter: ^1.0.7
+  flutter_inappwebview: ^4.0.0+4
   url_launcher: ^5.7.10
 
 

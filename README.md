@@ -5,7 +5,7 @@ Flutter widgets for mail apps.
 
 ## Usage
 The current `enough_mail_flutter` package the following widgets:
-*  `MimeMessageViewer` to display emails for which the contents has been already downloaded.
+* `MimeMessageViewer` to display emails for which the contents has been already downloaded.
 * `MimeMessageDownloader` to download message contents first if required - then uses the `MimeMessageViewer` to display. 
 
 ### MimeMessageViewer Usage
@@ -58,13 +58,11 @@ void onMessageDownloaded(MimeMessage mimeMessage) {
 ```
 
 ## Installation
-Add this dependencies your pubspec.yaml file:
+Add this dependency your pubspec.yaml file:
 
 ```
 dependencies:
   enough_mail_flutter: ^0.3.0
-  webview_flutter: ^1.0.7
-  url_launcher: ^5.7.10
 ```
 The latest version or `enough_mail_flutter` is [![enough_mail_flutter version](https://img.shields.io/pub/v/enough_mail_flutter.svg)](https://pub.dartlang.org/packages/enough_mail_flutter).
 
