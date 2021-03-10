@@ -1,16 +1,16 @@
 name: enough_mail_flutter
 description: Flutter widgets for mail apps. Licensed commercially friendly under MPL 2.0.
-version: 0.3.0
+version: 0.4.0
 homepage: https://github.com/enough-software/enough_mail_flutter
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: '>=2.10.0 <3.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  enough_mail: #^0.2.0
+  enough_mail: #^0.3.1
     git:
       url: https://github.com/Enough-Software/enough_mail.git
     # path: ../enough_mail
@@ -18,13 +18,12 @@ dependencies:
     git:
       url: https://github.com/Enough-Software/enough_mail_html.git
     # path: ../enough_mail_html
-  enough_media: #^0.2.0
+  enough_media: #^1.0.0
     git:
       url: https://github.com/Enough-Software/enough_media.git
     # path: ../enough_media
-  flutter_inappwebview: ^4.0.0+4
-  url_launcher: ^5.7.10
-
+  flutter_inappwebview: '>=5.1.0+4 <7.0.0'
+  url_launcher: '>=6.0.2 <8.0.0'
 
 dev_dependencies:
   flutter_test:

@@ -64,7 +64,7 @@ class _HtmlGenerationArguments {
 }
 
 class _HtmlViewerState extends State<MimeMessageViewer> {
-  String _base64EncodedHtml;
+  String _htmlData;
   bool _wereExternalImagesBlocked;
   bool _isGenerating;
   Widget _mediaView;
@@ -82,7 +82,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     _isGenerating = true;
     final args = _HtmlGenerationArguments(widget.mimeMessage,
         blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
-    _base64EncodedHtml = await compute(_generateHtmlImpl, args);
+    _htmlData = await compute(_generateHtmlImpl, args);
     if (mounted) {
       setState(() {
         _isGenerating = false;
@@ -96,8 +96,9 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       emptyMessageText: args.emptyMessageText,
       maxImageWidth: args.maxImageWidth,
     );
-    return 'data:text/html;base64,' +
-        base64Encode(const Utf8Encoder().convert(html));
+    return html;
+    // return 'data:text/html;base64,' +
+    //     base64Encode(const Utf8Encoder().convert(html));
   }
 
   @override
@@ -134,8 +135,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
 
   Widget buildWebView() {
     return InAppWebView(
-      key: ValueKey(_base64EncodedHtml),
-      initialUrl: _base64EncodedHtml,
+      key: ValueKey(_htmlData),
+      initialData: InAppWebViewInitialData(data: _htmlData),
       initialOptions: InAppWebViewGroupOptions(
         crossPlatform: InAppWebViewOptions(
           useShouldOverrideUrlLoading: true,
@@ -144,6 +145,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
         android: AndroidInAppWebViewOptions(
           useWideViewPort: true,
           loadWithOverviewMode: false,
+          useHybridComposition: true,
         ),
       ),
       onLoadStop: !widget.adjustHeight
@@ -158,7 +160,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
                   final size = MediaQuery.of(context).size;
                   if (scrollWidth > size.width) {
                     final scale = (size.width / scrollWidth);
-                    await controller.zoomBy(scale);
+                    await controller.zoomBy(
+                        zoomFactor: scale, iosAnimated: true);
                     scrollHeight = (scrollHeight * scale).ceil();
                   }
                 }
@@ -171,17 +174,16 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     );
   }
 
-  Future<ShouldOverrideUrlLoadingAction> shouldOverrideUrlLoading(
-      InAppWebViewController controller,
-      ShouldOverrideUrlLoadingRequest request) async {
-    if (widget.mailtoDelegate != null && request.url.startsWith('mailto:')) {
-      final mailto = Uri.parse(request.url);
-      await widget.mailtoDelegate(mailto, widget.mimeMessage);
-      return ShouldOverrideUrlLoadingAction.CANCEL;
+  Future<NavigationActionPolicy> shouldOverrideUrlLoading(
+      InAppWebViewController controller, NavigationAction request) async {
+    final requestUri = request.request.url;
+    if (widget.mailtoDelegate != null && requestUri.isScheme('mailto')) {
+      await widget.mailtoDelegate(requestUri, widget.mimeMessage);
+      return NavigationActionPolicy.CANCEL;
     }
-    if (request.url.startsWith('cid://')) {
+    if (requestUri.isScheme('cid')) {
       // show inline part:
-      final cid = request.url.substring('cid://'.length);
+      final cid = requestUri.path;
       final part = widget.mimeMessage.getPartWithContentId(cid);
       if (part != null) {
         final mediaProvider =
@@ -197,13 +199,14 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
           });
         }
       }
-      return ShouldOverrideUrlLoadingAction.CANCEL;
+      return NavigationActionPolicy.CANCEL;
     }
-    if (await launcher.canLaunch(request.url)) {
-      await launcher.launch(request.url);
-      return ShouldOverrideUrlLoadingAction.CANCEL;
+    final url = requestUri.toString();
+    if (await launcher.canLaunch(url)) {
+      await launcher.launch(url);
+      return NavigationActionPolicy.CANCEL;
     } else {
-      return ShouldOverrideUrlLoadingAction.ALLOW;
+      return NavigationActionPolicy.ALLOW;
     }
   }
 }
