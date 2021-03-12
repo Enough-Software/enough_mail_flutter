@@ -1,10 +1,10 @@
 # enough_mail_flutter
 
-Flutter widgets for mail apps.
+Flutter widgets for email apps based on [enough_mail](https://pub.dev/packages/enough_mail).
 
 
 ## Usage
-The current `enough_mail_flutter` package the following widgets:
+The `enough_mail_flutter` package contains the following widgets:
 * `MimeMessageViewer` to display emails for which the contents has been already downloaded.
 * `MimeMessageDownloader` to download message contents first if required - then uses the `MimeMessageViewer` to display. 
 

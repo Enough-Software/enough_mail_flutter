@@ -1,3 +1,8 @@
+## [0.4.0] - 2021-03-10.
+* Use `InAppWebview` in hybrid mode on Android so that long messages are not a problem anymore
+* Zoom out of wide messages automatically
+* Update dependencies for null-safety preparation
+
 ## [0.3.0] - 2021-02-02.
 * Generate HTML asynchronously.
 * Catch any problems during downloading and signal them to the widget owner with the `onDownloadError` handler.

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -17,12 +16,12 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 /// Viewer for mime message contents
 class MimeMessageViewer extends StatefulWidget {
   final MimeMessage mimeMessage;
-  final int maxImageWidth;
+  final int? maxImageWidth;
   final bool adjustHeight;
   final bool blockExternalImages;
-  final String emptyMessageText;
-  final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
-  final Future Function(InteractiveMediaWidget mediaViewer) showMediaDelegate;
+  final String? emptyMessageText;
+  final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
+  final Future Function(InteractiveMediaWidget mediaViewer)? showMediaDelegate;
 
   /// Creates a new mime message viewer
   ///
@@ -34,8 +33,8 @@ class MimeMessageViewer extends StatefulWidget {
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   MimeMessageViewer({
-    Key key,
-    @required this.mimeMessage,
+    Key? key,
+    required this.mimeMessage,
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.emptyMessageText,
@@ -46,7 +45,7 @@ class MimeMessageViewer extends StatefulWidget {
 
   @override
   State<MimeMessageViewer> createState() {
-    if (mimeMessage.mediaType?.isImage == true) {
+    if (mimeMessage.mediaType.isImage == true) {
       return _ImageViewerState();
     } else {
       return _HtmlViewerState();
@@ -57,19 +56,19 @@ class MimeMessageViewer extends StatefulWidget {
 class _HtmlGenerationArguments {
   final MimeMessage mimeMessage;
   final bool blockExternalImages;
-  final String emptyMessageText;
-  final int maxImageWidth;
+  final String? emptyMessageText;
+  final int? maxImageWidth;
   _HtmlGenerationArguments(this.mimeMessage, this.blockExternalImages,
       this.emptyMessageText, this.maxImageWidth);
 }
 
 class _HtmlViewerState extends State<MimeMessageViewer> {
-  String _htmlData;
-  bool _wereExternalImagesBlocked;
-  bool _isGenerating;
-  Widget _mediaView;
+  String? _htmlData;
+  bool? _wereExternalImagesBlocked;
+  bool _isGenerating = false;
+  Widget? _mediaView;
 
-  double _webViewHeight;
+  double? _webViewHeight;
 
   @override
   void initState() {
@@ -105,7 +104,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   Widget build(BuildContext context) {
     if (_mediaView != null) {
       return WillPopScope(
-        child: _mediaView,
+        child: _mediaView!,
         onWillPop: () {
           setState(() {
             _mediaView = null;
@@ -136,7 +135,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   Widget buildWebView() {
     return InAppWebView(
       key: ValueKey(_htmlData),
-      initialData: InAppWebViewInitialData(data: _htmlData),
+      initialData: InAppWebViewInitialData(data: _htmlData!),
       initialOptions: InAppWebViewGroupOptions(
         crossPlatform: InAppWebViewOptions(
           useShouldOverrideUrlLoading: true,
@@ -151,12 +150,12 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       onLoadStop: !widget.adjustHeight
           ? null
           : (controller, url) async {
-              int scrollHeight = await controller.evaluateJavascript(
-                  source: 'document.body.scrollHeight');
+              int? scrollHeight = (await controller.evaluateJavascript(
+                  source: 'document.body.scrollHeight')) as int?;
               if (scrollHeight != null) {
                 if (Platform.isAndroid) {
-                  int scrollWidth = await controller.evaluateJavascript(
-                      source: 'document.body.scrollWidth');
+                  int scrollWidth = (await controller.evaluateJavascript(
+                      source: 'document.body.scrollWidth')) as int;
                   final size = MediaQuery.of(context).size;
                   if (scrollWidth > size.width) {
                     final scale = (size.width / scrollWidth);
@@ -166,7 +165,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
                   }
                 }
                 setState(() {
-                  _webViewHeight = (scrollHeight + 10.0);
+                  _webViewHeight = (scrollHeight! + 10.0);
                 });
               }
             },
@@ -176,9 +175,9 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
 
   Future<NavigationActionPolicy> shouldOverrideUrlLoading(
       InAppWebViewController controller, NavigationAction request) async {
-    final requestUri = request.request.url;
+    final requestUri = request.request.url!;
     if (widget.mailtoDelegate != null && requestUri.isScheme('mailto')) {
-      await widget.mailtoDelegate(requestUri, widget.mimeMessage);
+      await widget.mailtoDelegate!(requestUri, widget.mimeMessage);
       return NavigationActionPolicy.CANCEL;
     }
     if (requestUri.isScheme('cid')) {
@@ -192,7 +191,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
           mediaProvider: mediaProvider,
         );
         if (widget.showMediaDelegate != null) {
-          widget.showMediaDelegate(mediaWidget);
+          widget.showMediaDelegate!(mediaWidget);
         } else {
           setState(() {
             _mediaView = mediaWidget;
@@ -214,7 +213,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
 /// State for a message with  `Content-Type: image/XXX`
 class _ImageViewerState extends State<MimeMessageViewer> {
   bool showFullScreen = false;
-  Uint8List imageData;
+  Uint8List? imageData;
 
   @override
   void initState() {
@@ -253,12 +252,14 @@ class _ImageViewerState extends State<MimeMessageViewer> {
                 widget.mimeMessage, widget.mimeMessage);
             final mediaWidget =
                 InteractiveMediaWidget(mediaProvider: mediaProvider);
-            widget.showMediaDelegate(mediaWidget);
+            widget.showMediaDelegate!(mediaWidget);
           } else {
             setState(() => showFullScreen = true);
           }
         },
-        child: Image.memory(imageData),
+        child: imageData != null
+            ? Image.memory(imageData!)
+            : Text('no image data'),
       );
     }
   }

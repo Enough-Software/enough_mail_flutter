@@ -9,16 +9,16 @@ class MimeMessageDownloader extends StatefulWidget {
   final MimeMessage mimeMessage;
   final MailClient mailClient;
   final int maxDownloadSize;
-  final int maxImageWidth;
+  final int? maxImageWidth;
   final String downloadErrorMessage;
-  final bool markAsSeen;
-  final void Function(MimeMessage message) onDownloaded;
-  final void Function(MailException e) onDownloadError;
+  final bool? markAsSeen;
+  final void Function(MimeMessage message)? onDownloaded;
+  final void Function(MailException e)? onDownloadError;
   final bool adjustHeight;
   final bool blockExternalImages;
-  final String emptyMessageText;
-  final Future Function(Uri mailto, MimeMessage mimeMessage) mailtoDelegate;
-  final Future Function(InteractiveMediaWidget mediaWidget) showMediaDelegate;
+  final String? emptyMessageText;
+  final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
+  final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
 
   /// Creates a new message downloader widget
   ///
@@ -37,9 +37,9 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   MimeMessageDownloader({
-    Key key,
-    @required this.mimeMessage,
-    @required this.mailClient,
+    Key? key,
+    required this.mimeMessage,
+    required this.mailClient,
     this.maxDownloadSize = 128 * 1024,
     this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
@@ -58,8 +58,8 @@ class MimeMessageDownloader extends StatefulWidget {
 }
 
 class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
-  MimeMessage mimeMessage;
-  Future<MimeMessage> downloader;
+  Future<MimeMessage>? downloader;
+  late MimeMessage mimeMessage;
 
   @override
   void initState() {
@@ -81,7 +81,6 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
             case ConnectionState.waiting:
             case ConnectionState.active:
               return Container(child: CircularProgressIndicator());
-              break;
             case ConnectionState.done:
               if (snapshot.hasError) {
                 return Text(widget.downloadErrorMessage);
@@ -110,23 +109,26 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   Future<MimeMessage> downloadMessageContents() async {
     try {
       // print('download message UID ${mimeMessage.uid} for state $this');
-      mimeMessage = await widget.mailClient.fetchMessageContents(mimeMessage,
-          maxSize: widget.maxDownloadSize, markAsSeen: widget.markAsSeen);
+      mimeMessage = await widget.mailClient.fetchMessageContents(
+          widget.mimeMessage,
+          maxSize: widget.maxDownloadSize,
+          markAsSeen: widget.markAsSeen);
+
       if (widget.onDownloaded != null) {
-        widget.onDownloaded(mimeMessage);
+        widget.onDownloaded!(mimeMessage);
       }
     } on MailException catch (e, s) {
       if (widget.onDownloadError != null) {
-        widget.onDownloadError(e);
+        widget.onDownloadError!(e);
       } else {
         print(
-            'Unable to download message ${mimeMessage.decodeSubject()}: $e $s');
+            'Unable to download message ${widget.mimeMessage.decodeSubject()}: $e $s');
       }
     } catch (e, s) {
       print(
-          'unexpected exception while downloading message with UID ${mimeMessage.uid} / ID ${mimeMessage.sequenceId}: $e $s');
+          'unexpected exception while downloading message with UID ${widget.mimeMessage.uid} / ID ${widget.mimeMessage.sequenceId}: $e $s');
       if (widget.onDownloadError != null) {
-        widget.onDownloadError(MailException(widget.mailClient, e.toString(),
+        widget.onDownloadError!(MailException(widget.mailClient, e.toString(),
             stackTrace: s, details: e));
       }
     }
