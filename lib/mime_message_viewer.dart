@@ -142,8 +142,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
           verticalScrollBarEnabled: false,
         ),
         android: AndroidInAppWebViewOptions(
-          useWideViewPort: true,
-          loadWithOverviewMode: false,
+          useWideViewPort: false,
+          loadWithOverviewMode: true,
           useHybridComposition: true,
         ),
       ),
@@ -159,9 +159,11 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
                   final size = MediaQuery.of(context).size;
                   if (scrollWidth > size.width) {
                     final scale = (size.width / scrollWidth);
-                    await controller.zoomBy(
-                        zoomFactor: scale, iosAnimated: true);
-                    scrollHeight = (scrollHeight * scale).ceil();
+                    if (scale > 0.1) {
+                      await controller.zoomBy(
+                          zoomFactor: scale, iosAnimated: true);
+                      scrollHeight = (scrollHeight * scale).ceil();
+                    }
                   }
                 }
                 setState(() {
@@ -170,6 +172,12 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               }
             },
       shouldOverrideUrlLoading: shouldOverrideUrlLoading,
+      androidOnPermissionRequest: (controller, origin, resources) {
+        print('androidOnPermissionRequest for $resources');
+        return Future.value(PermissionRequestResponse(
+            resources: resources,
+            action: PermissionRequestResponseAction.GRANT));
+      },
     );
   }
 
