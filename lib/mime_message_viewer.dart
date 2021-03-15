@@ -133,6 +133,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   }
 
   Widget buildWebView() {
+    final theme = Theme.of(context);
+    final isDark = (theme.brightness == Brightness.dark);
     return InAppWebView(
       key: ValueKey(_htmlData),
       initialData: InAppWebViewInitialData(data: _htmlData!),
@@ -140,11 +142,15 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
         crossPlatform: InAppWebViewOptions(
           useShouldOverrideUrlLoading: true,
           verticalScrollBarEnabled: false,
+          transparentBackground: isDark,
         ),
         android: AndroidInAppWebViewOptions(
           useWideViewPort: false,
           loadWithOverviewMode: true,
           useHybridComposition: true,
+          forceDark: isDark
+              ? AndroidForceDark.FORCE_DARK_ON
+              : AndroidForceDark.FORCE_DARK_OFF,
         ),
       ),
       onLoadStop: !widget.adjustHeight
