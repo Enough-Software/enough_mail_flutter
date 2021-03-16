@@ -11,7 +11,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final int maxDownloadSize;
   final int? maxImageWidth;
   final String downloadErrorMessage;
-  final bool? markAsSeen;
+  final bool markAsSeen;
   final void Function(MimeMessage message)? onDownloaded;
   final void Function(MailException e)? onDownloadError;
   final bool adjustHeight;
@@ -43,7 +43,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.maxDownloadSize = 128 * 1024,
     this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
-    this.markAsSeen,
+    this.markAsSeen = false,
     this.onDownloaded,
     this.onDownloadError,
     this.adjustHeight = true,
