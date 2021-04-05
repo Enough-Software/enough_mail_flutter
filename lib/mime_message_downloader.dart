@@ -19,6 +19,9 @@ class MimeMessageDownloader extends StatefulWidget {
   final String? emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
   final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
+  final void Function(InAppWebViewController controller)? onWebViewCreated;
+  final void Function(InAppWebViewController controller, double zoomFactor)?
+      onZoomed;
 
   /// Creates a new message downloader widget
   ///
@@ -36,6 +39,8 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
+  /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
+  /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
   MimeMessageDownloader({
     Key? key,
     required this.mimeMessage,
@@ -51,6 +56,8 @@ class MimeMessageDownloader extends StatefulWidget {
     this.emptyMessageText,
     this.mailtoDelegate,
     this.showMediaDelegate,
+    this.onWebViewCreated,
+    this.onZoomed,
   }) : super(key: key);
 
   @override
@@ -103,6 +110,8 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       mailtoDelegate: widget.mailtoDelegate,
       showMediaDelegate: widget.showMediaDelegate,
       maxImageWidth: widget.maxImageWidth,
+      onWebViewCreated: widget.onWebViewCreated,
+      onZoomed: widget.onZoomed,
     );
   }
 

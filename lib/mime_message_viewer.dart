@@ -22,6 +22,9 @@ class MimeMessageViewer extends StatefulWidget {
   final String? emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
   final Future Function(InteractiveMediaWidget mediaViewer)? showMediaDelegate;
+  final void Function(InAppWebViewController controller)? onWebViewCreated;
+  final void Function(InAppWebViewController controller, double zoomFactor)?
+      onZoomed;
 
   /// Creates a new mime message viewer
   ///
@@ -32,6 +35,8 @@ class MimeMessageViewer extends StatefulWidget {
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
+  /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
+  /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
   MimeMessageViewer({
     Key? key,
     required this.mimeMessage,
@@ -41,6 +46,8 @@ class MimeMessageViewer extends StatefulWidget {
     this.mailtoDelegate,
     this.showMediaDelegate,
     this.maxImageWidth,
+    this.onWebViewCreated,
+    this.onZoomed,
   }) : super(key: key);
 
   @override
@@ -153,36 +160,43 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               : AndroidForceDark.FORCE_DARK_OFF,
         ),
       ),
-      onLoadStop: !widget.adjustHeight
-          ? null
-          : (controller, url) async {
-              int? scrollHeight = (await controller.evaluateJavascript(
-                  source: 'document.body.scrollHeight')) as int?;
-              if (scrollHeight != null) {
-                if (Platform.isAndroid) {
-                  int scrollWidth = (await controller.evaluateJavascript(
-                      source: 'document.body.scrollWidth')) as int;
-                  final size = MediaQuery.of(context).size;
-                  if (scrollWidth > size.width) {
-                    final scale = (size.width / scrollWidth);
-                    if (scale > 0.1) {
-                      await controller.zoomBy(
-                          zoomFactor: scale, iosAnimated: true);
-                      scrollHeight = (scrollHeight * scale).ceil();
-                    }
-                  }
+      onWebViewCreated: widget.onWebViewCreated,
+      onLoadStop: (controller, url) async {
+        if (widget.adjustHeight) {
+          int? scrollHeight = (await controller.evaluateJavascript(
+              source: 'document.body.scrollHeight')) as int?;
+          if (scrollHeight != null) {
+            if (Platform.isAndroid) {
+              int scrollWidth = (await controller.evaluateJavascript(
+                  source: 'document.body.scrollWidth')) as int;
+              final size = MediaQuery.of(context).size;
+              if (scrollWidth > size.width) {
+                var scale = (size.width / scrollWidth);
+                if (scale < 0.2) {
+                  scale = 0.2;
                 }
-                setState(() {
-                  _webViewHeight = (scrollHeight! + 10.0);
-                });
+                await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
+                scrollHeight = (scrollHeight * scale).ceil();
+                final callback = widget.onZoomed;
+                if (callback != null) {
+                  callback(controller, scale);
+                }
               }
-            },
+            }
+            setState(() {
+              _webViewHeight = (scrollHeight! + 10.0);
+            });
+          }
+        }
+      },
       shouldOverrideUrlLoading: shouldOverrideUrlLoading,
       androidOnPermissionRequest: (controller, origin, resources) {
         print('androidOnPermissionRequest for $resources');
-        return Future.value(PermissionRequestResponse(
-            resources: resources,
-            action: PermissionRequestResponseAction.GRANT));
+        return Future.value(
+          PermissionRequestResponse(
+              resources: resources,
+              action: PermissionRequestResponseAction.GRANT),
+        );
       },
     );
   }
