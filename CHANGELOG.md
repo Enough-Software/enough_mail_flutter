@@ -1,3 +1,9 @@
+## [1.0.0] - 2021-04-07
+- `enough_mail_flutter` is now [null safe](https://dart.dev/null-safety/tour) #7
+- support dark theme
+- allow to specify `onWebViewCreated` and `onZoomed` callbacks
+- fix handling of embdedded images linked via content-IDs #8
+
 ## [0.4.0] - 2021-03-10.
 * Use `InAppWebview` in hybrid mode on Android so that long messages are not a problem anymore
 * Zoom out of wide messages automatically
