@@ -210,11 +210,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     }
     if (requestUri.isScheme('cid')) {
       // show inline part:
-      var cid = requestUri.path;
-      if ((cid.startsWith('%3C') && cid.endsWith('%3E')) ||
-          (cid.startsWith('%3c') && cid.endsWith('%3e'))) {
-        cid = '<${cid.substring('%3C'.length, cid.length - '%3E'.length)}>';
-      }
+      var cid = Uri.decodeComponent(requestUri.host);
       final part = widget.mimeMessage.getPartWithContentId(cid);
       if (part != null) {
         final mediaProvider =
