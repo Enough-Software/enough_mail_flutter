@@ -12,6 +12,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final int? maxImageWidth;
   final String downloadErrorMessage;
   final bool markAsSeen;
+  final List<MediaToptype>? includedInlineTypes;
   final void Function(MimeMessage message)? onDownloaded;
   final void Function(MailException e)? onDownloadError;
   final bool adjustHeight;
@@ -33,6 +34,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   /// [downloadErrorMessage] The shown error message when the message cannot be downloaded
   /// Set [markAsSeen] to `true` to automatically mark a message with the `\Seen` flag when it is being downloaded.
+  /// Optionally specify [includedInlineTypes] to exclude parts with an inline disposition and a different media type than specified.
   /// [onDownloaded] Optionally specify a callback to notify about a successful download.
   /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
   /// [blockExternalImages] Should external images be prevented from loaded? This defaults to `false`.
@@ -49,6 +51,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
     this.markAsSeen = false,
+    this.includedInlineTypes,
     this.onDownloaded,
     this.onDownloadError,
     this.adjustHeight = true,
@@ -119,9 +122,11 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     try {
       // print('download message UID ${mimeMessage.uid} for state $this');
       mimeMessage = await widget.mailClient.fetchMessageContents(
-          widget.mimeMessage,
-          maxSize: widget.maxDownloadSize,
-          markAsSeen: widget.markAsSeen);
+        widget.mimeMessage,
+        maxSize: widget.maxDownloadSize,
+        markAsSeen: widget.markAsSeen,
+        includedInlineTypes: widget.includedInlineTypes,
+      );
 
       if (widget.onDownloaded != null) {
         widget.onDownloaded!(mimeMessage);
