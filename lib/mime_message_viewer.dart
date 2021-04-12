@@ -76,6 +76,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   Widget? _mediaView;
 
   double? _webViewHeight;
+  bool _isHtmlMessage = true;
 
   @override
   void initState() {
@@ -86,6 +87,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   void generateHtml(bool blockExternalImages) async {
     _wereExternalImagesBlocked = blockExternalImages;
     _isGenerating = true;
+    _isHtmlMessage = widget.mimeMessage.hasPart(MediaSubtype.textHtml);
     final args = _HtmlGenerationArguments(widget.mimeMessage,
         blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
     _htmlData = await compute(_generateHtmlImpl, args);
@@ -170,7 +172,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               int scrollWidth = (await controller.evaluateJavascript(
                   source: 'document.body.scrollWidth')) as int;
               final size = MediaQuery.of(context).size;
-              if (scrollWidth > size.width) {
+              if (_isHtmlMessage && scrollWidth > size.width) {
                 var scale = (size.width / scrollWidth);
                 if (scale < 0.2) {
                   scale = 0.2;
