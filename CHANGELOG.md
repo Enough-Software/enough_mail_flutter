@@ -1,3 +1,8 @@
+## [1.1.0] - 2021-04-15
+- To improve download speed, you can limit the included media types when downloading the message contents with the `MessageDownloader.includedInlineTypes` parameter, e.g. `return MessageDownloader(includedInlineTypes: [MediaToptype.image]);`.
+- Use the `fetchId` to retrieve inline message parts in links starting with `fetch://`
+- Do not scale plain text messages
+
 ## [1.0.0] - 2021-04-07
 - `enough_mail_flutter` is now [null safe](https://dart.dev/null-safety/tour) #7
 - support dark theme
