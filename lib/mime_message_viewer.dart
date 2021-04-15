@@ -210,10 +210,12 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       await widget.mailtoDelegate!(requestUri, widget.mimeMessage);
       return NavigationActionPolicy.CANCEL;
     }
-    if (requestUri.isScheme('cid')) {
+    if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
       // show inline part:
       var cid = Uri.decodeComponent(requestUri.host);
-      final part = widget.mimeMessage.getPartWithContentId(cid);
+      final part = requestUri.isScheme('cid')
+          ? widget.mimeMessage.getPartWithContentId(cid)
+          : widget.mimeMessage.getPart(cid);
       if (part != null) {
         final mediaProvider =
             MimeMediaProviderFactory.fromMime(widget.mimeMessage, part);
