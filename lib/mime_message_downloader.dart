@@ -14,6 +14,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final bool markAsSeen;
   final List<MediaToptype>? includedInlineTypes;
   final void Function(MimeMessage message)? onDownloaded;
+  @deprecated
   final void Function(MailException e)? onDownloadError;
   final bool adjustHeight;
   final bool blockExternalImages;
@@ -23,6 +24,7 @@ class MimeMessageDownloader extends StatefulWidget {
   final void Function(InAppWebViewController controller)? onWebViewCreated;
   final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
+  final void Function(Object? exception, StackTrace? stackTrace)? onError;
 
   /// Creates a new message downloader widget
   ///
@@ -43,6 +45,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
+  /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
   MimeMessageDownloader({
     Key? key,
     required this.mimeMessage,
@@ -53,7 +56,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.markAsSeen = false,
     this.includedInlineTypes,
     this.onDownloaded,
-    this.onDownloadError,
+    @deprecated this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.emptyMessageText,
@@ -61,6 +64,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.showMediaDelegate,
     this.onWebViewCreated,
     this.onZoomed,
+    this.onError,
   }) : super(key: key);
 
   @override
@@ -115,6 +119,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       maxImageWidth: widget.maxImageWidth,
       onWebViewCreated: widget.onWebViewCreated,
       onZoomed: widget.onZoomed,
+      onError: widget.onError,
     );
   }
 
@@ -132,7 +137,9 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
         widget.onDownloaded!(mimeMessage);
       }
     } on MailException catch (e, s) {
-      if (widget.onDownloadError != null) {
+      if (widget.onError != null) {
+        widget.onError!(e, s);
+      } else if (widget.onDownloadError != null) {
         widget.onDownloadError!(e);
       } else {
         print(
@@ -141,7 +148,9 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     } catch (e, s) {
       print(
           'unexpected exception while downloading message with UID ${widget.mimeMessage.uid} / ID ${widget.mimeMessage.sequenceId}: $e $s');
-      if (widget.onDownloadError != null) {
+      if (widget.onError != null) {
+        widget.onError!(e, s);
+      } else if (widget.onDownloadError != null) {
         widget.onDownloadError!(MailException(widget.mailClient, e.toString(),
             stackTrace: s, details: e));
       }

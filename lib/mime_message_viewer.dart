@@ -25,6 +25,7 @@ class MimeMessageViewer extends StatefulWidget {
   final void Function(InAppWebViewController controller)? onWebViewCreated;
   final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
+  final void Function(Object? exception, StackTrace? stackTrace)? onError;
 
   /// Creates a new mime message viewer
   ///
@@ -37,6 +38,7 @@ class MimeMessageViewer extends StatefulWidget {
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
+  /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
   MimeMessageViewer({
     Key? key,
     required this.mimeMessage,
@@ -48,6 +50,7 @@ class MimeMessageViewer extends StatefulWidget {
     this.maxImageWidth,
     this.onWebViewCreated,
     this.onZoomed,
+    this.onError,
   }) : super(key: key);
 
   @override
@@ -65,8 +68,17 @@ class _HtmlGenerationArguments {
   final bool blockExternalImages;
   final String? emptyMessageText;
   final int? maxImageWidth;
+
   _HtmlGenerationArguments(this.mimeMessage, this.blockExternalImages,
       this.emptyMessageText, this.maxImageWidth);
+}
+
+class _HtmlGenerationResult {
+  final String? html;
+  final String? errorDetails;
+  _HtmlGenerationResult.success(this.html) : errorDetails = null;
+
+  _HtmlGenerationResult.error(this.errorDetails) : this.html = null;
 }
 
 class _HtmlViewerState extends State<MimeMessageViewer> {
@@ -90,7 +102,14 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     _isHtmlMessage = widget.mimeMessage.hasPart(MediaSubtype.textHtml);
     final args = _HtmlGenerationArguments(widget.mimeMessage,
         blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
-    _htmlData = await compute(_generateHtmlImpl, args);
+    final result = await compute(_generateHtmlImpl, args);
+    _htmlData = result.html;
+    if (_htmlData == null) {
+      final onError = widget.onError;
+      if (onError != null) {
+        onError(result.errorDetails, null);
+      }
+    }
     if (mounted) {
       setState(() {
         _isGenerating = false;
@@ -98,13 +117,20 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     }
   }
 
-  static String _generateHtmlImpl(_HtmlGenerationArguments args) {
-    final html = args.mimeMessage.transformToHtml(
-      blockExternalImages: args.blockExternalImages,
-      emptyMessageText: args.emptyMessageText,
-      maxImageWidth: args.maxImageWidth,
-    );
-    return html;
+  static _HtmlGenerationResult _generateHtmlImpl(
+      _HtmlGenerationArguments args) {
+    try {
+      final html = args.mimeMessage.transformToHtml(
+        blockExternalImages: args.blockExternalImages,
+        emptyMessageText: args.emptyMessageText,
+        maxImageWidth: args.maxImageWidth,
+      );
+      return _HtmlGenerationResult.success(html);
+    } catch (e, s) {
+      print('ERROR: unable to transform mime message to HTML: $e $s');
+      String errorDetails = e.toString() + '\n\n' + s.toString();
+      return _HtmlGenerationResult.error(errorDetails);
+    }
     // return 'data:text/html;base64,' +
     //     base64Encode(const Utf8Encoder().convert(html));
   }
@@ -142,6 +168,9 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   }
 
   Widget buildWebView() {
+    if (_htmlData == null) {
+      return Container();
+    }
     final theme = Theme.of(context);
     final isDark = (theme.brightness == Brightness.dark);
     return InAppWebView(
