@@ -9,7 +9,7 @@ class MimeMediaProviderFactory {
     var mediaType = mimePart.mediaType;
     if (mediaType.sub == MediaSubtype.applicationOctetStream &&
         name.isNotEmpty) {
-      mediaType = MediaType.guessFromFilName(name);
+      mediaType = MediaType.guessFromFileName(name);
     }
     if (mediaType.isText) {
       return TextMediaProvider(
