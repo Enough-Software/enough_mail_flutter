@@ -7,6 +7,7 @@ import 'package:enough_mail_flutter/enough_mail_flutter.dart';
 import 'package:enough_mail_flutter/mime_media_provider.dart';
 import 'package:enough_media/enough_media.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -222,13 +223,20 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       },
       shouldOverrideUrlLoading: shouldOverrideUrlLoading,
       androidOnPermissionRequest: (controller, origin, resources) {
-        print('androidOnPermissionRequest for $resources');
+        // print('androidOnPermissionRequest for $resources');
         return Future.value(
           PermissionRequestResponse(
               resources: resources,
               action: PermissionRequestResponseAction.GRANT),
         );
       },
+      gestureRecognizers: widget.adjustHeight
+          ? {
+              Factory<LongPressGestureRecognizer>(
+                  () => LongPressGestureRecognizer()),
+              Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+            }
+          : null,
     );
   }
 
