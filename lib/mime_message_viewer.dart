@@ -195,29 +195,27 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
       onWebViewCreated: widget.onWebViewCreated,
       onLoadStop: (controller, url) async {
         if (widget.adjustHeight) {
-          int? scrollHeight = (await controller.evaluateJavascript(
-              source: 'document.body.scrollHeight')) as int?;
+          var scrollHeight = (await controller.evaluateJavascript(
+              source: 'document.body.scrollHeight'));
           if (scrollHeight != null) {
-            if (Platform.isAndroid) {
-              int scrollWidth = (await controller.evaluateJavascript(
-                  source: 'document.body.scrollWidth')) as int;
-              final size = MediaQuery.of(context).size;
-              if (_isHtmlMessage && scrollWidth > size.width) {
-                var scale = (size.width / scrollWidth);
-                if (scale < 0.2) {
-                  scale = 0.2;
-                }
-                await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
-                scrollHeight = (scrollHeight * scale).ceil();
-                final callback = widget.onZoomed;
-                if (callback != null) {
-                  callback(controller, scale);
-                }
+            final scrollWidth = (await controller.evaluateJavascript(
+                source: 'document.body.scrollWidth'));
+            final size = MediaQuery.of(context).size;
+            if (_isHtmlMessage && scrollWidth > size.width) {
+              var scale = (size.width / scrollWidth);
+              if (scale < 0.2) {
+                scale = 0.2;
               }
+              await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
+              scrollHeight = (scrollHeight * scale).ceil();
+              final callback = widget.onZoomed;
+              if (callback != null) {
+                callback(controller, scale);
+              }
+              setState(() {
+                _webViewHeight = (scrollHeight + 10.0);
+              });
             }
-            setState(() {
-              _webViewHeight = (scrollHeight! + 10.0);
-            });
           }
         }
       },
