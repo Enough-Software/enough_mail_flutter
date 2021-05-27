@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
@@ -197,10 +196,13 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
         if (widget.adjustHeight) {
           var scrollHeight = (await controller.evaluateJavascript(
               source: 'document.body.scrollHeight'));
+          // print('scrollHeight: $scrollHeight');
           if (scrollHeight != null) {
             final scrollWidth = (await controller.evaluateJavascript(
                 source: 'document.body.scrollWidth'));
+            // print('scrollWidth: $scrollWidth');
             final size = MediaQuery.of(context).size;
+            // print('size: ${size.height}x${size.width}');
             if (_isHtmlMessage && scrollWidth > size.width) {
               var scale = (size.width / scrollWidth);
               if (scale < 0.2) {
@@ -212,10 +214,11 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               if (callback != null) {
                 callback(controller, scale);
               }
-              setState(() {
-                _webViewHeight = (scrollHeight + 10.0);
-              });
             }
+            setState(() {
+              _webViewHeight = (scrollHeight + 10.0);
+              // print('webViewHeight set to $_webViewHeight');
+            });
           }
         }
       },
@@ -232,7 +235,8 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
           ? {
               Factory<LongPressGestureRecognizer>(
                   () => LongPressGestureRecognizer()),
-              Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+              // The scale gesture recognizer interferes with scrolling on Flutter 2.2
+              // Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
             }
           : null,
     );
