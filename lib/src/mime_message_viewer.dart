@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
-import 'package:enough_mail_flutter/enough_mail_flutter.dart';
-import 'package:enough_mail_flutter/mime_media_provider.dart';
 import 'package:enough_media/enough_media.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -12,6 +10,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
+
+import 'mime_media_provider.dart';
 
 /// Viewer for mime message contents
 class MimeMessageViewer extends StatefulWidget {

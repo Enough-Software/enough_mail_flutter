@@ -4,6 +4,8 @@ import 'package:enough_media/enough_media.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
+import 'mime_message_viewer.dart';
+
 /// Downloads the mime message contents if required before showing them within a [MimeMesageViewer].
 class MimeMessageDownloader extends StatefulWidget {
   final MimeMessage mimeMessage;
