@@ -1,3 +1,8 @@
+## [1.2.0] - 2021-06-13
+- Adapt to API changes of dependent libraries and Flutter
+- Restructure package
+- Ensure compatibility with WebKit / iOS
+
 ## [1.1.0] - 2021-04-15
 - To improve download speed, you can limit the included media types when downloading the message contents with the `MessageDownloader.includedInlineTypes` parameter, e.g. `return MessageDownloader(includedInlineTypes: [MediaToptype.image]);`.
 - Use the `fetchId` to retrieve inline message parts in links starting with `fetch://`
