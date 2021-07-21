@@ -1,3 +1,6 @@
+## [1.3.0] - 2021-07-21
+- Updated dependencies, improved documentation
+
 ## [1.2.0] - 2021-06-13
 - Adapt to API changes of dependent libraries and Flutter
 - Restructure package
