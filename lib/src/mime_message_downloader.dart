@@ -58,7 +58,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.markAsSeen = false,
     this.includedInlineTypes,
     this.onDownloaded,
-    @deprecated this.onDownloadError,
+    @Deprecated('use generic "onError" callback instead') this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.emptyMessageText,
