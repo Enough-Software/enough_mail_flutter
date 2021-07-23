@@ -28,6 +28,10 @@ class MimeMessageDownloader extends StatefulWidget {
       onZoomed;
   final void Function(Object? exception, StackTrace? stackTrace)? onError;
 
+  /// With a builder you can take over the rendering for certain messages or mime types.
+  final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
+      builder;
+
   /// Creates a new message downloader widget
   ///
   /// [mimeMessage] The mime message which may not be downloaded yet.
@@ -48,6 +52,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
   /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
+  /// With a [builder] you can take over the rendering for certain messages or mime types.
   MimeMessageDownloader({
     Key? key,
     required this.mimeMessage,
@@ -67,6 +72,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.onWebViewCreated,
     this.onZoomed,
     this.onError,
+    this.builder,
   }) : super(key: key);
 
   @override
@@ -122,6 +128,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       onWebViewCreated: widget.onWebViewCreated,
       onZoomed: widget.onZoomed,
       onError: widget.onError,
+      builder: widget.builder,
     );
   }
 

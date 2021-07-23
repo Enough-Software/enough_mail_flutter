@@ -14,18 +14,40 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 import 'mime_media_provider.dart';
 
 /// Viewer for mime message contents
-class MimeMessageViewer extends StatefulWidget {
+class MimeMessageViewer extends StatelessWidget {
+  /// The mime message that should be shown
   final MimeMessage mimeMessage;
+
+  /// The optional maximum width for inline images
   final int? maxImageWidth;
+
+  /// Sets if the height of this view should be set automatically, this is required to be `true` when using the MimeMessageViewer in a scrollable view.
   final bool adjustHeight;
+
   final bool blockExternalImages;
+
+  /// The default text that should be shown for empty messages.
   final String? emptyMessageText;
+
+  /// Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
+
+  /// Handler for showing the given media widget, typically in its own screen
   final Future Function(InteractiveMediaWidget mediaViewer)? showMediaDelegate;
+
+  /// Register this callback if you want a reference to the [InAppWebViewController].
   final void Function(InAppWebViewController controller)? onWebViewCreated;
+
+  /// This callback will be called when the webview zooms out after loading, usually this is a sign that the user might want to zoom in again.
   final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
+
+  /// Is notified about any errors that might occur
   final void Function(Object? exception, StackTrace? stackTrace)? onError;
+
+  /// With a builder you can take over the rendering for certain messages or mime types.
+  final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
+      builder;
 
   /// Creates a new mime message viewer
   ///
@@ -39,6 +61,7 @@ class MimeMessageViewer extends StatefulWidget {
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
   /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
+  /// With a [builder] you can take over the rendering for certain messages or mime types.
   MimeMessageViewer({
     Key? key,
     required this.mimeMessage,
@@ -51,14 +74,22 @@ class MimeMessageViewer extends StatefulWidget {
     this.onWebViewCreated,
     this.onZoomed,
     this.onError,
+    this.builder,
   }) : super(key: key);
 
   @override
-  State<MimeMessageViewer> createState() {
-    if (mimeMessage.mediaType.isImage == true) {
-      return _ImageViewerState();
+  Widget build(BuildContext context) {
+    final callback = builder;
+    if (callback != null) {
+      final builtWidget = callback(context, mimeMessage);
+      if (builtWidget != null) {
+        return builtWidget;
+      }
+    }
+    if (mimeMessage.mediaType.isImage) {
+      return _ImageMimeMessageViewer(config: this);
     } else {
-      return _HtmlViewerState();
+      return _HtmlMimeMessageViewer(config: this);
     }
   }
 }
@@ -81,7 +112,15 @@ class _HtmlGenerationResult {
   _HtmlGenerationResult.error(this.errorDetails) : this.html = null;
 }
 
-class _HtmlViewerState extends State<MimeMessageViewer> {
+class _HtmlMimeMessageViewer extends StatefulWidget {
+  final MimeMessageViewer config;
+  _HtmlMimeMessageViewer({Key? key, required this.config}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _HtmlViewerState();
+}
+
+class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   String? _htmlData;
   bool? _wereExternalImagesBlocked;
   bool _isGenerating = false;
@@ -92,20 +131,21 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
 
   @override
   void initState() {
-    generateHtml(widget.blockExternalImages);
+    generateHtml(widget.config.blockExternalImages);
     super.initState();
   }
 
   void generateHtml(bool blockExternalImages) async {
     _wereExternalImagesBlocked = blockExternalImages;
     _isGenerating = true;
-    _isHtmlMessage = widget.mimeMessage.hasPart(MediaSubtype.textHtml);
-    final args = _HtmlGenerationArguments(widget.mimeMessage,
-        blockExternalImages, widget.emptyMessageText, widget.maxImageWidth);
+    final mimeMessage = widget.config.mimeMessage;
+    _isHtmlMessage = mimeMessage.hasPart(MediaSubtype.textHtml);
+    final args = _HtmlGenerationArguments(mimeMessage, blockExternalImages,
+        widget.config.emptyMessageText, widget.config.maxImageWidth);
     final result = await compute(_generateHtmlImpl, args);
     _htmlData = result.html;
     if (_htmlData == null) {
-      final onError = widget.onError;
+      final onError = widget.config.onError;
       if (onError != null) {
         onError(result.errorDetails, null);
       }
@@ -151,11 +191,11 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
     if (_isGenerating) {
       return Container(child: CircularProgressIndicator());
     }
-    if (widget.blockExternalImages != _wereExternalImagesBlocked) {
-      generateHtml(widget.blockExternalImages);
+    if (widget.config.blockExternalImages != _wereExternalImagesBlocked) {
+      generateHtml(widget.config.blockExternalImages);
     }
 
-    if (widget.adjustHeight) {
+    if (widget.config.adjustHeight) {
       final size = MediaQuery.of(context).size;
       return SizedBox(
         height: _webViewHeight ?? size.height,
@@ -191,9 +231,9 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               : AndroidForceDark.FORCE_DARK_OFF,
         ),
       ),
-      onWebViewCreated: widget.onWebViewCreated,
+      onWebViewCreated: widget.config.onWebViewCreated,
       onLoadStop: (controller, url) async {
-        if (widget.adjustHeight) {
+        if (widget.config.adjustHeight) {
           var scrollHeight = (await controller.evaluateJavascript(
               source: 'document.body.scrollHeight'));
           // print('scrollHeight: $scrollHeight');
@@ -210,7 +250,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               }
               await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
               scrollHeight = (scrollHeight * scale).ceil();
-              final callback = widget.onZoomed;
+              final callback = widget.config.onZoomed;
               if (callback != null) {
                 callback(controller, scale);
               }
@@ -231,7 +271,7 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
               action: PermissionRequestResponseAction.GRANT),
         );
       },
-      gestureRecognizers: widget.adjustHeight
+      gestureRecognizers: widget.config.adjustHeight
           ? {
               Factory<LongPressGestureRecognizer>(
                   () => LongPressGestureRecognizer()),
@@ -245,24 +285,27 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   Future<NavigationActionPolicy> shouldOverrideUrlLoading(
       InAppWebViewController controller, NavigationAction request) async {
     final requestUri = request.request.url!;
-    if (widget.mailtoDelegate != null && requestUri.isScheme('mailto')) {
-      await widget.mailtoDelegate!(requestUri, widget.mimeMessage);
+    final mimeMessage = widget.config.mimeMessage;
+    final mailtoHandler = widget.config.mailtoDelegate;
+    if (mailtoHandler != null && requestUri.isScheme('mailto')) {
+      await mailtoHandler(requestUri, mimeMessage);
       return NavigationActionPolicy.CANCEL;
     }
     if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
       // show inline part:
       var cid = Uri.decodeComponent(requestUri.host);
       final part = requestUri.isScheme('cid')
-          ? widget.mimeMessage.getPartWithContentId(cid)
-          : widget.mimeMessage.getPart(cid);
+          ? mimeMessage.getPartWithContentId(cid)
+          : mimeMessage.getPart(cid);
       if (part != null) {
         final mediaProvider =
-            MimeMediaProviderFactory.fromMime(widget.mimeMessage, part);
+            MimeMediaProviderFactory.fromMime(mimeMessage, part);
         final mediaWidget = InteractiveMediaWidget(
           mediaProvider: mediaProvider,
         );
-        if (widget.showMediaDelegate != null) {
-          widget.showMediaDelegate!(mediaWidget);
+        final showMediaCallback = widget.config.showMediaDelegate;
+        if (showMediaCallback != null) {
+          showMediaCallback(mediaWidget);
         } else {
           setState(() {
             _mediaView = mediaWidget;
@@ -281,20 +324,29 @@ class _HtmlViewerState extends State<MimeMessageViewer> {
   }
 }
 
+class _ImageMimeMessageViewer extends StatefulWidget {
+  final MimeMessageViewer config;
+
+  const _ImageMimeMessageViewer({Key? key, required this.config})
+      : super(key: key);
+  @override
+  State<StatefulWidget> createState() => _ImageViewerState();
+}
+
 /// State for a message with  `Content-Type: image/XXX`
-class _ImageViewerState extends State<MimeMessageViewer> {
-  bool showFullScreen = false;
-  Uint8List? imageData;
+class _ImageViewerState extends State<_ImageMimeMessageViewer> {
+  bool _showFullScreen = false;
+  Uint8List? _imageData;
 
   @override
   void initState() {
-    imageData = widget.mimeMessage.decodeContentBinary();
+    _imageData = widget.config.mimeMessage.decodeContentBinary();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (showFullScreen) {
+    if (_showFullScreen) {
       final screenHeight = MediaQuery.of(context).size.height;
       return WillPopScope(
         child: LayoutBuilder(
@@ -306,30 +358,31 @@ class _ImageViewerState extends State<MimeMessageViewer> {
               constraints: constraints,
               child: ImageInteractiveMedia(
                   mediaProvider: MimeMediaProviderFactory.fromMime(
-                      widget.mimeMessage, widget.mimeMessage)),
+                      widget.config.mimeMessage, widget.config.mimeMessage)),
             );
           },
         ),
         onWillPop: () {
-          setState(() => showFullScreen = false);
+          setState(() => _showFullScreen = false);
           return Future.value(false);
         },
       );
     } else {
       return TextButton(
         onPressed: () {
-          if (widget.showMediaDelegate != null) {
+          final callback = widget.config.showMediaDelegate;
+          if (callback != null) {
             final mediaProvider = MimeMediaProviderFactory.fromMime(
-                widget.mimeMessage, widget.mimeMessage);
+                widget.config.mimeMessage, widget.config.mimeMessage);
             final mediaWidget =
                 InteractiveMediaWidget(mediaProvider: mediaProvider);
-            widget.showMediaDelegate!(mediaWidget);
+            callback(mediaWidget);
           } else {
-            setState(() => showFullScreen = true);
+            setState(() => _showFullScreen = true);
           }
         },
-        child: imageData != null
-            ? Image.memory(imageData!)
+        child: _imageData != null
+            ? Image.memory(_imageData!)
             : Text('no image data'),
       );
     }
