@@ -1,3 +1,6 @@
+## [1.4.0] - 2021-07-31
+- Register a `builder` function to overtake building for specific messages.
+
 ## [1.3.0] - 2021-07-21
 - Updated dependencies, improved documentation
 
