@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_mail_flutter/enough_mail_flutter.dart';
 import 'package:enough_media/enough_media.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
@@ -20,6 +23,11 @@ class MimeMessageDownloader extends StatefulWidget {
   final void Function(MailException e)? onDownloadError;
   final bool adjustHeight;
   final bool blockExternalImages;
+
+  /// Defines if dark mode should be enabled.
+  ///
+  /// This might be required on devices with older browser implementations.
+  final bool enableDarkMode;
   final String? emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
   final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
@@ -46,6 +54,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [onDownloaded] Optionally specify a callback to notify about a successful download.
   /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
   /// [blockExternalImages] Should external images be prevented from loaded? This defaults to `false`.
+  /// Set [enableDarkMode] to `true` to enforce dark mode on devices with older browsers.
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
@@ -66,6 +75,7 @@ class MimeMessageDownloader extends StatefulWidget {
     @Deprecated('use generic "onError" callback instead') this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
+    this.enableDarkMode = false,
     this.emptyMessageText,
     this.mailtoDelegate,
     this.showMediaDelegate,
@@ -87,7 +97,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   void initState() {
     mimeMessage = widget.mimeMessage;
     if (!mimeMessage.isDownloaded) {
-      downloader = downloadMessageContents();
+      downloader = _downloadMessageContents();
     }
     super.initState();
   }
@@ -102,25 +112,33 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
             case ConnectionState.none:
             case ConnectionState.waiting:
             case ConnectionState.active:
-              return Container(child: CircularProgressIndicator());
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Center(
+                  child: (Platform.isIOS || Platform.isMacOS)
+                      ? CupertinoActivityIndicator()
+                      : CircularProgressIndicator(),
+                ),
+              );
             case ConnectionState.done:
               if (snapshot.hasError) {
                 return Text(widget.downloadErrorMessage);
               }
               break;
           }
-          return buildMessageContent();
+          return _buildMessageContent();
         },
       );
     }
-    return buildMessageContent();
+    return _buildMessageContent();
   }
 
-  Widget buildMessageContent() {
+  Widget _buildMessageContent() {
     return MimeMessageViewer(
       mimeMessage: mimeMessage,
       adjustHeight: widget.adjustHeight,
       blockExternalImages: widget.blockExternalImages,
+      enableDarkMode: widget.enableDarkMode,
       emptyMessageText: widget.emptyMessageText,
       mailtoDelegate: widget.mailtoDelegate,
       showMediaDelegate: widget.showMediaDelegate,
@@ -132,7 +150,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     );
   }
 
-  Future<MimeMessage> downloadMessageContents() async {
+  Future<MimeMessage> _downloadMessageContents() async {
     try {
       // print('download message UID ${mimeMessage.uid} for state $this');
       mimeMessage = await widget.mailClient.fetchMessageContents(

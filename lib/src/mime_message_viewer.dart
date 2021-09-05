@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_media/enough_media.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +26,13 @@ class MimeMessageViewer extends StatelessWidget {
   /// Sets if the height of this view should be set automatically, this is required to be `true` when using the MimeMessageViewer in a scrollable view.
   final bool adjustHeight;
 
+  /// Defines if external images should be removed
   final bool blockExternalImages;
+
+  /// Defines if dark mode should be enabled.
+  ///
+  /// This might be required on devices with older browser implementations.
+  final bool enableDarkMode;
 
   /// The default text that should be shown for empty messages.
   final String? emptyMessageText;
@@ -54,6 +62,7 @@ class MimeMessageViewer extends StatelessWidget {
   /// [mimeMessage] The message with loaded message contents.
   /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
   /// [blockExternalImages]  Should external images be prevented from loaded? This defaults to `false`.
+  /// Set [enableDarkMode] to `true` to enforce dark mode on devices with older browsers.
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
@@ -67,6 +76,7 @@ class MimeMessageViewer extends StatelessWidget {
     required this.mimeMessage,
     this.adjustHeight = true,
     this.blockExternalImages = false,
+    this.enableDarkMode = false,
     this.emptyMessageText,
     this.mailtoDelegate,
     this.showMediaDelegate,
@@ -97,19 +107,25 @@ class MimeMessageViewer extends StatelessWidget {
 class _HtmlGenerationArguments {
   final MimeMessage mimeMessage;
   final bool blockExternalImages;
+  final bool enableDarkMode;
   final String? emptyMessageText;
   final int? maxImageWidth;
 
-  _HtmlGenerationArguments(this.mimeMessage, this.blockExternalImages,
-      this.emptyMessageText, this.maxImageWidth);
+  const _HtmlGenerationArguments(
+    this.mimeMessage,
+    this.blockExternalImages,
+    this.enableDarkMode,
+    this.emptyMessageText,
+    this.maxImageWidth,
+  );
 }
 
 class _HtmlGenerationResult {
   final String? html;
   final String? errorDetails;
-  _HtmlGenerationResult.success(this.html) : errorDetails = null;
+  const _HtmlGenerationResult.success(this.html) : errorDetails = null;
 
-  _HtmlGenerationResult.error(this.errorDetails) : this.html = null;
+  const _HtmlGenerationResult.error(this.errorDetails) : this.html = null;
 }
 
 class _HtmlMimeMessageViewer extends StatefulWidget {
@@ -131,17 +147,23 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
   @override
   void initState() {
-    generateHtml(widget.config.blockExternalImages);
+    _generateHtml(
+        widget.config.blockExternalImages, widget.config.enableDarkMode);
     super.initState();
   }
 
-  void generateHtml(bool blockExternalImages) async {
+  void _generateHtml(bool blockExternalImages, bool enableDarkMode) async {
     _wereExternalImagesBlocked = blockExternalImages;
     _isGenerating = true;
     final mimeMessage = widget.config.mimeMessage;
     _isHtmlMessage = mimeMessage.hasPart(MediaSubtype.textHtml);
-    final args = _HtmlGenerationArguments(mimeMessage, blockExternalImages,
-        widget.config.emptyMessageText, widget.config.maxImageWidth);
+    final args = _HtmlGenerationArguments(
+      mimeMessage,
+      blockExternalImages,
+      enableDarkMode,
+      widget.config.emptyMessageText,
+      widget.config.maxImageWidth,
+    );
     final result = await compute(_generateHtmlImpl, args);
     _htmlData = result.html;
     if (_htmlData == null) {
@@ -162,6 +184,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     try {
       final html = args.mimeMessage.transformToHtml(
         blockExternalImages: args.blockExternalImages,
+        enableDarkMode: args.enableDarkMode,
         emptyMessageText: args.emptyMessageText,
         maxImageWidth: args.maxImageWidth,
       );
@@ -171,8 +194,6 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       String errorDetails = e.toString() + '\n\n' + s.toString();
       return _HtmlGenerationResult.error(errorDetails);
     }
-    // return 'data:text/html;base64,' +
-    //     base64Encode(const Utf8Encoder().convert(html));
   }
 
   @override
@@ -189,10 +210,18 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       );
     }
     if (_isGenerating) {
-      return Container(child: CircularProgressIndicator());
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Center(
+          child: (Platform.isIOS || Platform.isMacOS)
+              ? CupertinoActivityIndicator()
+              : CircularProgressIndicator(),
+        ),
+      );
     }
     if (widget.config.blockExternalImages != _wereExternalImagesBlocked) {
-      generateHtml(widget.config.blockExternalImages);
+      _generateHtml(
+          widget.config.blockExternalImages, widget.config.enableDarkMode);
     }
 
     if (widget.config.adjustHeight) {
@@ -200,19 +229,20 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       return SizedBox(
         height: _webViewHeight ?? size.height,
         width: size.width,
-        child: buildWebView(),
+        child: _buildWebView(),
       );
     } else {
-      return buildWebView();
+      return _buildWebView();
     }
   }
 
-  Widget buildWebView() {
+  Widget _buildWebView() {
     if (_htmlData == null) {
       return Container();
     }
     final theme = Theme.of(context);
-    final isDark = (theme.brightness == Brightness.dark);
+    final isDark =
+        (theme.brightness == Brightness.dark) || widget.config.enableDarkMode;
     return InAppWebView(
       key: ValueKey(_htmlData),
       initialData: InAppWebViewInitialData(data: _htmlData!),
@@ -262,7 +292,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           }
         }
       },
-      shouldOverrideUrlLoading: shouldOverrideUrlLoading,
+      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
       androidOnPermissionRequest: (controller, origin, resources) {
         // print('androidOnPermissionRequest for $resources');
         return Future.value(
@@ -282,7 +312,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     );
   }
 
-  Future<NavigationActionPolicy> shouldOverrideUrlLoading(
+  Future<NavigationActionPolicy> _shouldOverrideUrlLoading(
       InAppWebViewController controller, NavigationAction request) async {
     final requestUri = request.request.url!;
     final mimeMessage = widget.config.mimeMessage;
