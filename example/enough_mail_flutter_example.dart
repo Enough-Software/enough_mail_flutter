@@ -3,6 +3,7 @@ import 'package:enough_mail_flutter/enough_mail_flutter.dart';
 import 'package:flutter/widgets.dart';
 
 /// Example implementation for displaying the message contents.
+/// 
 /// When required, the message contents are downloaded first.
 /// The implementation assumes that the `size` and `envelope` information have been previously downloaded,
 /// e.g. using `MailClient.fetchMessages(fetchPreference: FetchPreference.envelope)`.
@@ -22,8 +23,7 @@ void onMessageDownloaded(MimeMessage mimeMessage) {
   //setState(() {});
 }
 
-/// Example implementation for displaying a message
-/// for which the contents already have been downloaded:
+/// Example implementation for displaying a message for which the contents already have been downloaded:
 Widget buildViewerForDownloadedMessage(MimeMessage mimeMessage) {
   return MimeMessageViewer(
     mimeMessage: mimeMessage,
