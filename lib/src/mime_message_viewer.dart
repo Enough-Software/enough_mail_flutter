@@ -29,6 +29,9 @@ class MimeMessageViewer extends StatelessWidget {
   /// Defines if external images should be removed
   final bool blockExternalImages;
 
+  /// Should the plain text be used instead of the HTML text?
+  final bool preferPlainText;
+
   /// Defines if dark mode should be enabled.
   ///
   /// This might be required on devices with older browser implementations.
@@ -62,6 +65,7 @@ class MimeMessageViewer extends StatelessWidget {
   /// [mimeMessage] The message with loaded message contents.
   /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
   /// [blockExternalImages]  Should external images be prevented from loaded? This defaults to `false`.
+  /// Set [preferPlainText] to `true` to use plain text instead of the HTML text.
   /// Set [enableDarkMode] to `true` to enforce dark mode on devices with older browsers.
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
@@ -76,6 +80,7 @@ class MimeMessageViewer extends StatelessWidget {
     required this.mimeMessage,
     this.adjustHeight = true,
     this.blockExternalImages = false,
+    this.preferPlainText = false,
     this.enableDarkMode = false,
     this.emptyMessageText,
     this.mailtoDelegate,
@@ -107,6 +112,7 @@ class MimeMessageViewer extends StatelessWidget {
 class _HtmlGenerationArguments {
   final MimeMessage mimeMessage;
   final bool blockExternalImages;
+  final bool preferPlainText;
   final bool enableDarkMode;
   final String? emptyMessageText;
   final int? maxImageWidth;
@@ -114,6 +120,7 @@ class _HtmlGenerationArguments {
   const _HtmlGenerationArguments(
     this.mimeMessage,
     this.blockExternalImages,
+    this.preferPlainText,
     this.enableDarkMode,
     this.emptyMessageText,
     this.maxImageWidth,
@@ -147,12 +154,13 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
   @override
   void initState() {
-    _generateHtml(
-        widget.config.blockExternalImages, widget.config.enableDarkMode);
+    _generateHtml(widget.config.blockExternalImages,
+        widget.config.preferPlainText, widget.config.enableDarkMode);
     super.initState();
   }
 
-  void _generateHtml(bool blockExternalImages, bool enableDarkMode) async {
+  void _generateHtml(bool blockExternalImages, bool preferPlainText,
+      bool enableDarkMode) async {
     _wereExternalImagesBlocked = blockExternalImages;
     _isGenerating = true;
     final mimeMessage = widget.config.mimeMessage;
@@ -160,6 +168,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     final args = _HtmlGenerationArguments(
       mimeMessage,
       blockExternalImages,
+      preferPlainText,
       enableDarkMode,
       widget.config.emptyMessageText,
       widget.config.maxImageWidth,
@@ -184,6 +193,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     try {
       final html = args.mimeMessage.transformToHtml(
         blockExternalImages: args.blockExternalImages,
+        preferPlainText: args.preferPlainText,
         enableDarkMode: args.enableDarkMode,
         emptyMessageText: args.emptyMessageText,
         maxImageWidth: args.maxImageWidth,
@@ -220,8 +230,8 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       );
     }
     if (widget.config.blockExternalImages != _wereExternalImagesBlocked) {
-      _generateHtml(
-          widget.config.blockExternalImages, widget.config.enableDarkMode);
+      _generateHtml(widget.config.blockExternalImages,
+          widget.config.preferPlainText, widget.config.enableDarkMode);
     }
 
     if (widget.config.adjustHeight) {

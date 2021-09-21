@@ -40,6 +40,9 @@ class MimeMessageDownloader extends StatefulWidget {
   final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
       builder;
 
+  /// Should the plain text be used instead of the HTML text?
+  final bool preferPlainText;
+
   /// Creates a new message downloader widget
   ///
   /// [mimeMessage] The mime message which may not be downloaded yet.
@@ -75,6 +78,7 @@ class MimeMessageDownloader extends StatefulWidget {
     @Deprecated('use generic "onError" callback instead') this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
+    this.preferPlainText = false,
     this.enableDarkMode = false,
     this.emptyMessageText,
     this.mailtoDelegate,
@@ -138,6 +142,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       mimeMessage: mimeMessage,
       adjustHeight: widget.adjustHeight,
       blockExternalImages: widget.blockExternalImages,
+      preferPlainText: widget.preferPlainText,
       enableDarkMode: widget.enableDarkMode,
       emptyMessageText: widget.emptyMessageText,
       mailtoDelegate: widget.mailtoDelegate,
