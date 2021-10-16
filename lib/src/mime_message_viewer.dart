@@ -46,6 +46,9 @@ class MimeMessageViewer extends StatelessWidget {
   /// Handler for showing the given media widget, typically in its own screen
   final Future Function(InteractiveMediaWidget mediaViewer)? showMediaDelegate;
 
+  /// Handler for any non-media URLs that the user taps on the website, return `true` when the given `url` was handled.
+  final Future<bool> Function(String url)? urlLauncherDelegate;
+
   /// Register this callback if you want a reference to the [InAppWebViewController].
   final void Function(InAppWebViewController controller)? onWebViewCreated;
 
@@ -69,7 +72,8 @@ class MimeMessageViewer extends StatelessWidget {
   /// Set [enableDarkMode] to `true` to enforce dark mode on devices with older browsers.
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
-  /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
+  /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen.
+  /// Specify a [urlLauncherDelegate] when you want to handle URL invocations yourself.
   /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
@@ -85,6 +89,7 @@ class MimeMessageViewer extends StatelessWidget {
     this.emptyMessageText,
     this.mailtoDelegate,
     this.showMediaDelegate,
+    this.urlLauncherDelegate,
     this.maxImageWidth,
     this.onWebViewCreated,
     this.onZoomed,
@@ -355,6 +360,13 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       return NavigationActionPolicy.CANCEL;
     }
     final url = requestUri.toString();
+    final urlDelegate = widget.config.urlLauncherDelegate;
+    if (urlDelegate != null) {
+      final handled = await urlDelegate(url);
+      if (handled) {
+        return NavigationActionPolicy.CANCEL;
+      }
+    }
     if (await launcher.canLaunch(url)) {
       await launcher.launch(url);
       return NavigationActionPolicy.CANCEL;

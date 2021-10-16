@@ -31,6 +31,9 @@ class MimeMessageDownloader extends StatefulWidget {
   final String? emptyMessageText;
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
   final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
+
+  /// Handler for any non-media URLs that the user taps on the website, return `true` when the given `url` was handled.
+  final Future<bool> Function(String url)? urlLauncherDelegate;
   final void Function(InAppWebViewController controller)? onWebViewCreated;
   final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
@@ -61,6 +64,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// [emptyMessageText] The default text that should be shown for empty messages.
   /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
+  /// Specify a [urlLauncherDelegate] when you want to handle URL invocations yourself.
   /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
   /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
   /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
@@ -83,6 +87,7 @@ class MimeMessageDownloader extends StatefulWidget {
     this.emptyMessageText,
     this.mailtoDelegate,
     this.showMediaDelegate,
+    this.urlLauncherDelegate,
     this.onWebViewCreated,
     this.onZoomed,
     this.onError,
@@ -147,6 +152,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
       emptyMessageText: widget.emptyMessageText,
       mailtoDelegate: widget.mailtoDelegate,
       showMediaDelegate: widget.showMediaDelegate,
+      urlLauncherDelegate: widget.urlLauncherDelegate,
       maxImageWidth: widget.maxImageWidth,
       onWebViewCreated: widget.onWebViewCreated,
       onZoomed: widget.onZoomed,
