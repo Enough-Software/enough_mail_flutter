@@ -1,11 +1,10 @@
 import 'dart:io';
 
 import 'package:enough_mail/enough_mail.dart';
-import 'package:enough_mail_flutter/enough_mail_flutter.dart';
 import 'package:enough_media/enough_media.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import 'mime_message_viewer.dart';
 
@@ -34,8 +33,8 @@ class MimeMessageDownloader extends StatefulWidget {
 
   /// Handler for any non-media URLs that the user taps on the website, return `true` when the given `url` was handled.
   final Future<bool> Function(String url)? urlLauncherDelegate;
-  final void Function(InAppWebViewController controller)? onWebViewCreated;
-  final void Function(InAppWebViewController controller, double zoomFactor)?
+  final void Function(WebViewController controller)? onWebViewCreated;
+  final void Function(WebViewController controller, double zoomFactor)?
       onZoomed;
   final void Function(Object? exception, StackTrace? stackTrace)? onError;
 

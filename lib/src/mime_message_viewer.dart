@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,10 +9,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
+import 'package:webview_flutter/webview_flutter.dart';
 
 import 'mime_media_provider.dart';
 
@@ -50,10 +50,10 @@ class MimeMessageViewer extends StatelessWidget {
   final Future<bool> Function(String url)? urlLauncherDelegate;
 
   /// Register this callback if you want a reference to the [InAppWebViewController].
-  final void Function(InAppWebViewController controller)? onWebViewCreated;
+  final void Function(WebViewController controller)? onWebViewCreated;
 
   /// This callback will be called when the webview zooms out after loading, usually this is a sign that the user might want to zoom in again.
-  final void Function(InAppWebViewController controller, double zoomFactor)?
+  final void Function(WebViewController controller, double zoomFactor)?
       onZoomed;
 
   /// Is notified about any errors that might occur
@@ -157,6 +157,8 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   double? _webViewHeight;
   bool _isHtmlMessage = true;
 
+  late WebViewController _controller;
+
   @override
   void initState() {
     _generateHtml(widget.config.blockExternalImages,
@@ -203,7 +205,14 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         emptyMessageText: args.emptyMessageText,
         maxImageWidth: args.maxImageWidth,
       );
-      return _HtmlGenerationResult.success(html);
+      final base64Html = Uri.dataFromString(
+        html,
+        mimeType: 'text/html',
+        encoding: utf8,
+        base64: true,
+      ).toString();
+
+      return _HtmlGenerationResult.success(base64Html);
     } catch (e, s) {
       print('ERROR: unable to transform mime message to HTML: $e $s');
       String errorDetails = e.toString() + '\n\n' + s.toString();
@@ -252,54 +261,62 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   }
 
   Widget _buildWebView() {
-    if (_htmlData == null) {
+    final htmlData = _htmlData;
+    if (htmlData == null) {
       return Container();
     }
     final theme = Theme.of(context);
     final isDark =
         (theme.brightness == Brightness.dark) || widget.config.enableDarkMode;
-    return InAppWebView(
-      key: ValueKey(_htmlData),
-      initialData: InAppWebViewInitialData(data: _htmlData!),
-      initialOptions: InAppWebViewGroupOptions(
-        crossPlatform: InAppWebViewOptions(
-          useShouldOverrideUrlLoading: true,
-          verticalScrollBarEnabled: false,
-          transparentBackground: isDark,
-        ),
-        android: AndroidInAppWebViewOptions(
-          useWideViewPort: false,
-          loadWithOverviewMode: true,
-          useHybridComposition: true,
-          forceDark: isDark
-              ? AndroidForceDark.FORCE_DARK_ON
-              : AndroidForceDark.FORCE_DARK_OFF,
-        ),
-      ),
-      onWebViewCreated: widget.config.onWebViewCreated,
-      onLoadStop: (controller, url) async {
+    return WebView(
+      key: ValueKey(htmlData),
+      initialUrl: htmlData,
+      javascriptMode: JavascriptMode.unrestricted,
+      // initialData: InAppWebViewInitialData(data: _htmlData!),
+      // initialOptions: InAppWebViewGroupOptions(
+      //   crossPlatform: InAppWebViewOptions(
+      //     useShouldOverrideUrlLoading: true,
+      //     verticalScrollBarEnabled: false,
+      //     transparentBackground: isDark,
+      //   ),
+      //   android: AndroidInAppWebViewOptions(
+      //     useWideViewPort: false,
+      //     loadWithOverviewMode: true,
+      //     useHybridComposition: true,
+      //     forceDark: isDark
+      //         ? AndroidForceDark.FORCE_DARK_ON
+      //         : AndroidForceDark.FORCE_DARK_OFF,
+      //   ),
+      // ),
+      onWebViewCreated: (controller) {
+        _controller = controller;
+        widget.config.onWebViewCreated?.call(controller);
+      },
+      onPageFinished: (url) async {
         if (widget.config.adjustHeight) {
-          var scrollHeight = (await controller.evaluateJavascript(
-              source: 'document.body.scrollHeight'));
-          // print('scrollHeight: $scrollHeight');
-          if (scrollHeight != null) {
-            final scrollWidth = (await controller.evaluateJavascript(
-                source: 'document.body.scrollWidth'));
-            // print('scrollWidth: $scrollWidth');
-            final size = MediaQuery.of(context).size;
-            // print('size: ${size.height}x${size.width}');
-            if (_isHtmlMessage && scrollWidth > size.width) {
-              var scale = (size.width / scrollWidth);
-              if (scale < 0.2) {
-                scale = 0.2;
-              }
-              await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
-              scrollHeight = (scrollHeight * scale).ceil();
-              final callback = widget.config.onZoomed;
-              if (callback != null) {
-                callback(controller, scale);
-              }
-            }
+          final scrollHeightText = await _controller
+              .runJavascriptReturningResult('document.body.scrollHeight');
+          final scrollHeight = double.tryParse(scrollHeightText);
+          // print('scrollHeight: $scrollHeightText');
+          // final scrollWidthText = await _controller
+          //     .runJavascriptReturningResult('document.body.scrollWidth');
+          // print('scrollWidth: $scrollWidthText');
+          // final scrollWidth = double.tryParse(scrollWidthText);
+          if (scrollHeight != null && mounted) {
+            // final size = MediaQuery.of(context).size;
+            // // print('size: ${size.height}x${size.width}');
+            // if (_isHtmlMessage && scrollWidth > size.width) {
+            //   var scale = (size.width / scrollWidth);
+            //   if (scale < 0.2) {
+            //     scale = 0.2;
+            //   }
+            //   await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
+            //   scrollHeight = (scrollHeight * scale).ceil();
+            //   final callback = widget.config.onZoomed;
+            //   if (callback != null) {
+            //     callback(controller, scale);
+            //   }
+            // }
             setState(() {
               _webViewHeight = (scrollHeight + 10.0);
               // print('webViewHeight set to $_webViewHeight');
@@ -307,15 +324,16 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           }
         }
       },
-      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
-      androidOnPermissionRequest: (controller, origin, resources) {
-        // print('androidOnPermissionRequest for $resources');
-        return Future.value(
-          PermissionRequestResponse(
-              resources: resources,
-              action: PermissionRequestResponseAction.GRANT),
-        );
-      },
+      navigationDelegate: _onNavigation,
+      // shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
+      // androidOnPermissionRequest: (controller, origin, resources) {
+      //   // print('androidOnPermissionRequest for $resources');
+      //   return Future.value(
+      //     PermissionRequestResponse(
+      //         resources: resources,
+      //         action: PermissionRequestResponseAction.GRANT),
+      //   );
+      // },
       gestureRecognizers: widget.config.adjustHeight
           ? {
               Factory<LongPressGestureRecognizer>(
@@ -327,14 +345,62 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     );
   }
 
-  Future<NavigationActionPolicy> _shouldOverrideUrlLoading(
-      InAppWebViewController controller, NavigationAction request) async {
-    final requestUri = request.request.url!;
+  // Future<NavigationActionPolicy> _shouldOverrideUrlLoading(
+  //     InAppWebViewController controller, NavigationAction request) async {
+  //   final requestUri = request.request.url!;
+  //   final mimeMessage = widget.config.mimeMessage;
+  //   final mailtoHandler = widget.config.mailtoDelegate;
+  //   if (mailtoHandler != null && requestUri.isScheme('mailto')) {
+  //     await mailtoHandler(requestUri, mimeMessage);
+  //     return NavigationActionPolicy.CANCEL;
+  //   }
+  //   if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
+  //     // show inline part:
+  //     var cid = Uri.decodeComponent(requestUri.host);
+  //     final part = requestUri.isScheme('cid')
+  //         ? mimeMessage.getPartWithContentId(cid)
+  //         : mimeMessage.getPart(cid);
+  //     if (part != null) {
+  //       final mediaProvider =
+  //           MimeMediaProviderFactory.fromMime(mimeMessage, part);
+  //       final mediaWidget = InteractiveMediaWidget(
+  //         mediaProvider: mediaProvider,
+  //       );
+  //       final showMediaCallback = widget.config.showMediaDelegate;
+  //       if (showMediaCallback != null) {
+  //         showMediaCallback(mediaWidget);
+  //       } else {
+  //         setState(() {
+  //           _mediaView = mediaWidget;
+  //         });
+  //       }
+  //     }
+  //     return NavigationActionPolicy.CANCEL;
+  //   }
+  //   final url = requestUri.toString();
+  //   final urlDelegate = widget.config.urlLauncherDelegate;
+  //   if (urlDelegate != null) {
+  //     final handled = await urlDelegate(url);
+  //     if (handled) {
+  //       return NavigationActionPolicy.CANCEL;
+  //     }
+  //   }
+  //   if (await launcher.canLaunch(url)) {
+  //     await launcher.launch(url);
+  //     return NavigationActionPolicy.CANCEL;
+  //   } else {
+  //     return NavigationActionPolicy.ALLOW;
+  //   }
+  // }
+
+  FutureOr<NavigationDecision> _onNavigation(
+      NavigationRequest navigation) async {
+    final requestUri = Uri.parse(navigation.url);
     final mimeMessage = widget.config.mimeMessage;
     final mailtoHandler = widget.config.mailtoDelegate;
     if (mailtoHandler != null && requestUri.isScheme('mailto')) {
       await mailtoHandler(requestUri, mimeMessage);
-      return NavigationActionPolicy.CANCEL;
+      return NavigationDecision.prevent;
     }
     if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
       // show inline part:
@@ -357,22 +423,24 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           });
         }
       }
-      return NavigationActionPolicy.CANCEL;
+      return NavigationDecision.prevent;
     }
-    final url = requestUri.toString();
+    final url = navigation.url;
     final urlDelegate = widget.config.urlLauncherDelegate;
     if (urlDelegate != null) {
       final handled = await urlDelegate(url);
       if (handled) {
-        return NavigationActionPolicy.CANCEL;
+        return NavigationDecision.prevent;
       }
     }
-    if (await launcher.canLaunch(url)) {
-      await launcher.launch(url);
-      return NavigationActionPolicy.CANCEL;
-    } else {
-      return NavigationActionPolicy.ALLOW;
-    }
+    //if (await launcher.canLaunch(url)) {
+    // not checking due to
+    // https://github.com/flutter/flutter/issues/93765#issuecomment-1018994962
+    await launcher.launch(url);
+    return NavigationDecision.prevent;
+    // } else {
+    //   return NavigationDecision.navigate;
+    // }
   }
 }
 
