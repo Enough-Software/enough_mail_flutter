@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_media/enough_media.dart';
 import 'package:flutter/cupertino.dart';
@@ -7,68 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'mime_message_viewer.dart';
+import 'progress_indicator.dart';
 
-/// Downloads the mime message contents if required before showing them within a [MimeMesageViewer].
+/// Downloads the mime message contents if required
+/// before showing them within a [MimeMessageViewer].
 class MimeMessageDownloader extends StatefulWidget {
-  final MimeMessage mimeMessage;
-  final MailClient mailClient;
-  final int maxDownloadSize;
-  final int? maxImageWidth;
-  final String downloadErrorMessage;
-  final bool markAsSeen;
-  final List<MediaToptype>? includedInlineTypes;
-  final void Function(MimeMessage message)? onDownloaded;
-  @deprecated
-  final void Function(MailException e)? onDownloadError;
-  final bool adjustHeight;
-  final bool blockExternalImages;
-
-  /// Defines if dark mode should be enabled.
-  ///
-  /// This might be required on devices with older browser implementations.
-  final bool enableDarkMode;
-  final String? emptyMessageText;
-  final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
-  final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
-
-  /// Handler for any non-media URLs that the user taps on the website, return `true` when the given `url` was handled.
-  final Future<bool> Function(String url)? urlLauncherDelegate;
-  final void Function(WebViewController controller)? onWebViewCreated;
-  final void Function(WebViewController controller, double zoomFactor)?
-      onZoomed;
-  final void Function(Object? exception, StackTrace? stackTrace)? onError;
-
-  /// With a builder you can take over the rendering for certain messages or mime types.
-  final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
-      builder;
-
-  /// Should the plain text be used instead of the HTML text?
-  final bool preferPlainText;
-
   /// Creates a new message downloader widget
-  ///
-  /// [mimeMessage] The mime message which may not be downloaded yet.
-  /// [mailClient] The initialized `MailClient` instance for downloading
-  /// [maxDownloadSize] The maximum size in bytes of messages that are fully downloaded. The defaults to `128*1024` / `128kb`.
-  /// When the message size is bigger, only inline parts are downloaded - at least over IMAP. Use `null` to download
-  /// the complete message no matter what the message size is.
-  /// Optionally specify the [maxImageWidth] to set the maximum width for embedded images.
-  /// [downloadErrorMessage] The shown error message when the message cannot be downloaded
-  /// Set [markAsSeen] to `true` to automatically mark a message with the `\Seen` flag when it is being downloaded.
-  /// Optionally specify [includedInlineTypes] to exclude parts with an inline disposition and a different media type than specified.
-  /// [onDownloaded] Optionally specify a callback to notify about a successful download.
-  /// [adjustHeight] Should the webview measure itself and adapt its size? This defaults to `true`.
-  /// [blockExternalImages] Should external images be prevented from loaded? This defaults to `false`.
-  /// Set [enableDarkMode] to `true` to enforce dark mode on devices with older browsers.
-  /// [emptyMessageText] The default text that should be shown for empty messages.
-  /// [mailtoDelegate] Handler for mailto: links. Typically you will want to open a new compose view prepulated with a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
-  /// [showMediaDelegate] Handler for showing the given media widget, typically in its own screen
-  /// Specify a [urlLauncherDelegate] when you want to handle URL invocations yourself.
-  /// Set the [onWebViewCreated] callback if you want a reference to the [InAppWebViewController].
-  /// Set the [onZoomed] callback if you want to be notified when the webview is zoomed out after loading.
-  /// Set the [onError] callback in case you want to be notfied about processing errors such as format exceptions.
-  /// With a [builder] you can take over the rendering for certain messages or mime types.
-  MimeMessageDownloader({
+  const MimeMessageDownloader({
     Key? key,
     required this.mimeMessage,
     required this.mailClient,
@@ -78,7 +21,6 @@ class MimeMessageDownloader extends StatefulWidget {
     this.markAsSeen = false,
     this.includedInlineTypes,
     this.onDownloaded,
-    @Deprecated('use generic "onError" callback instead') this.onDownloadError,
     this.adjustHeight = true,
     this.blockExternalImages = false,
     this.preferPlainText = false,
@@ -92,6 +34,86 @@ class MimeMessageDownloader extends StatefulWidget {
     this.onError,
     this.builder,
   }) : super(key: key);
+
+  /// The partial MIME message
+  final MimeMessage mimeMessage;
+
+  /// The high level mail client to download message contents
+  final MailClient mailClient;
+
+  /// The maximum size in bytes of messages that are fully downloaded.
+  /// The defaults to `128*1024` / `128kb`.
+  ///
+  /// When the message size is bigger, only inline parts are downloaded -
+  /// at least over IMAP. Use `null` to download the complete message no matter
+  /// what the message size is.
+  final int maxDownloadSize;
+
+  /// The maxmimum image width for inline images
+  final int? maxImageWidth;
+
+  /// The error message to be shown when message downloading failed
+  final String downloadErrorMessage;
+
+  /// Set to `true` when the message should be marked as with the downloading
+  final bool markAsSeen;
+
+  /// Optional list of media types to be shown inline
+  final List<MediaToptype>? includedInlineTypes;
+
+  /// Callback to get informed when the message has been downloaded
+  final void Function(MimeMessage message)? onDownloaded;
+
+  /// Should the height of the displayed mime message be limited?
+  ///
+  /// This must be the case when the message contents are shown within
+  /// a scrollable view.
+  final bool adjustHeight;
+
+  /// Defines if external images should be removed
+  final bool blockExternalImages;
+
+  /// Defines if dark mode should be enabled.
+  ///
+  /// This might be required on devices with older browser implementations.
+  final bool enableDarkMode;
+
+  /// The text shown when an image has no inline content
+  final String? emptyMessageText;
+
+  /// Handler for mailto: links.
+  ///
+  /// Typically you will want to open a new compose view prepulated with
+  /// a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
+  final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
+
+  /// Handler for showing the given media widget, typically in its own screen
+  final Future Function(InteractiveMediaWidget mediaWidget)? showMediaDelegate;
+
+  /// Handler for any non-media URLs that the user taps on the website.
+  ///
+  /// Returns `true` when the given `url` was handled.
+  final Future<bool> Function(String url)? urlLauncherDelegate;
+
+  /// Register this callback if you want a reference to the [WebViewController].
+  final void Function(WebViewController controller)? onWebViewCreated;
+
+  /// This callback will be called when the webview zooms out after loading.
+  ///
+  /// Usually this is a sign that the user might want to zoom in again.
+  final void Function(WebViewController controller, double zoomFactor)?
+      onZoomed;
+
+  /// Is notified about any errors that might occur
+  final void Function(Object? exception, StackTrace? stackTrace)? onError;
+
+  /// With a builder you can take over the rendering
+  /// for certain messages or mime types.
+  final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
+      builder;
+
+  /// Should the plain text be used instead of the HTML text?
+  final bool preferPlainText;
 
   @override
   _MimeMessageDownloaderState createState() => _MimeMessageDownloaderState();
@@ -120,12 +142,10 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
             case ConnectionState.none:
             case ConnectionState.waiting:
             case ConnectionState.active:
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
+              return const Padding(
+                padding: EdgeInsets.all(8.0),
                 child: Center(
-                  child: (Platform.isIOS || Platform.isMacOS)
-                      ? CupertinoActivityIndicator()
-                      : CircularProgressIndicator(),
+                  child: PlatformProgressIndicator(),
                 ),
               );
             case ConnectionState.done:
@@ -141,24 +161,22 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     return _buildMessageContent();
   }
 
-  Widget _buildMessageContent() {
-    return MimeMessageViewer(
-      mimeMessage: mimeMessage,
-      adjustHeight: widget.adjustHeight,
-      blockExternalImages: widget.blockExternalImages,
-      preferPlainText: widget.preferPlainText,
-      enableDarkMode: widget.enableDarkMode,
-      emptyMessageText: widget.emptyMessageText,
-      mailtoDelegate: widget.mailtoDelegate,
-      showMediaDelegate: widget.showMediaDelegate,
-      urlLauncherDelegate: widget.urlLauncherDelegate,
-      maxImageWidth: widget.maxImageWidth,
-      onWebViewCreated: widget.onWebViewCreated,
-      onZoomed: widget.onZoomed,
-      onError: widget.onError,
-      builder: widget.builder,
-    );
-  }
+  Widget _buildMessageContent() => MimeMessageViewer(
+        mimeMessage: mimeMessage,
+        adjustHeight: widget.adjustHeight,
+        blockExternalImages: widget.blockExternalImages,
+        preferPlainText: widget.preferPlainText,
+        enableDarkMode: widget.enableDarkMode,
+        emptyMessageText: widget.emptyMessageText,
+        mailtoDelegate: widget.mailtoDelegate,
+        showMediaDelegate: widget.showMediaDelegate,
+        urlLauncherDelegate: widget.urlLauncherDelegate,
+        maxImageWidth: widget.maxImageWidth,
+        onWebViewCreated: widget.onWebViewCreated,
+        onZoomed: widget.onZoomed,
+        onError: widget.onError,
+        builder: widget.builder,
+      );
 
   Future<MimeMessage> _downloadMessageContents() async {
     try {
@@ -176,20 +194,15 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     } on MailException catch (e, s) {
       if (widget.onError != null) {
         widget.onError!(e, s);
-      } else if (widget.onDownloadError != null) {
-        widget.onDownloadError!(e);
       } else {
-        print(
-            'Unable to download message ${widget.mimeMessage.decodeSubject()}: $e $s');
+        print('Unable to download message '
+            '${widget.mimeMessage.decodeSubject()}: $e $s');
       }
     } catch (e, s) {
       print(
           'unexpected exception while downloading message with UID ${widget.mimeMessage.uid} / ID ${widget.mimeMessage.sequenceId}: $e $s');
       if (widget.onError != null) {
         widget.onError!(e, s);
-      } else if (widget.onDownloadError != null) {
-        widget.onDownloadError!(MailException(widget.mailClient, e.toString(),
-            stackTrace: s, details: e));
       }
     }
     return mimeMessage;

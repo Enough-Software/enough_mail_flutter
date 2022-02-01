@@ -35,6 +35,7 @@ dependency_overrides:
 
 
 dev_dependencies:
+  lints: ^1.0.1
   flutter_test:
     sdk: flutter
 
