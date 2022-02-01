@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
@@ -155,7 +154,9 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   Widget? _mediaView;
 
   double? _webViewHeight;
+  double? _webViewWidth;
   bool _isHtmlMessage = true;
+  bool _isLoading = true;
 
   late WebViewController _controller;
 
@@ -237,9 +238,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       return Padding(
         padding: const EdgeInsets.all(8.0),
         child: Center(
-          child: (Platform.isIOS || Platform.isMacOS)
-              ? CupertinoActivityIndicator()
-              : CircularProgressIndicator(),
+          child: _buildProgressIndicator(),
         ),
       );
     }
@@ -250,10 +249,47 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
     if (widget.config.adjustHeight) {
       final size = MediaQuery.of(context).size;
+      final width = _webViewWidth;
+      final height = _webViewHeight ?? size.height;
+      if (width != null) {
+        return FittedBox(
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: _buildWebView(),
+          ),
+        );
+      }
       return SizedBox(
-        height: _webViewHeight ?? size.height,
+        height: height,
         width: size.width,
-        child: _buildWebView(),
+        child: _buildWebViewWithLoadingIndicator(),
+      );
+    } else {
+      return _buildWebViewWithLoadingIndicator();
+    }
+  }
+
+  Widget _buildProgressIndicator() {
+    return (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)
+        ? CupertinoActivityIndicator()
+        : CircularProgressIndicator();
+  }
+
+  Widget _buildWebViewWithLoadingIndicator() {
+    if (_isLoading) {
+      return Stack(
+        children: [
+          _buildWebView(),
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildProgressIndicator(),
+            ),
+          )
+        ],
       );
     } else {
       return _buildWebView();
@@ -265,29 +301,11 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     if (htmlData == null) {
       return Container();
     }
-    final theme = Theme.of(context);
-    final isDark =
-        (theme.brightness == Brightness.dark) || widget.config.enableDarkMode;
     return WebView(
       key: ValueKey(htmlData),
       initialUrl: htmlData,
       javascriptMode: JavascriptMode.unrestricted,
-      // initialData: InAppWebViewInitialData(data: _htmlData!),
-      // initialOptions: InAppWebViewGroupOptions(
-      //   crossPlatform: InAppWebViewOptions(
-      //     useShouldOverrideUrlLoading: true,
-      //     verticalScrollBarEnabled: false,
-      //     transparentBackground: isDark,
-      //   ),
-      //   android: AndroidInAppWebViewOptions(
-      //     useWideViewPort: false,
-      //     loadWithOverviewMode: true,
-      //     useHybridComposition: true,
-      //     forceDark: isDark
-      //         ? AndroidForceDark.FORCE_DARK_ON
-      //         : AndroidForceDark.FORCE_DARK_OFF,
-      //   ),
-      // ),
+
       onWebViewCreated: (controller) {
         _controller = controller;
         widget.config.onWebViewCreated?.call(controller);
@@ -298,30 +316,42 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
               .runJavascriptReturningResult('document.body.scrollHeight');
           final scrollHeight = double.tryParse(scrollHeightText);
           // print('scrollHeight: $scrollHeightText');
-          // final scrollWidthText = await _controller
-          //     .runJavascriptReturningResult('document.body.scrollWidth');
+          final scrollWidthText = await _controller
+              .runJavascriptReturningResult('document.body.scrollWidth');
           // print('scrollWidth: $scrollWidthText');
-          // final scrollWidth = double.tryParse(scrollWidthText);
+          final scrollWidth = double.tryParse(scrollWidthText);
           if (scrollHeight != null && mounted) {
-            // final size = MediaQuery.of(context).size;
-            // // print('size: ${size.height}x${size.width}');
-            // if (_isHtmlMessage && scrollWidth > size.width) {
-            //   var scale = (size.width / scrollWidth);
-            //   if (scale < 0.2) {
-            //     scale = 0.2;
-            //   }
-            //   await controller.zoomBy(zoomFactor: scale, iosAnimated: true);
-            //   scrollHeight = (scrollHeight * scale).ceil();
-            //   final callback = widget.config.onZoomed;
-            //   if (callback != null) {
-            //     callback(controller, scale);
-            //   }
-            // }
-            setState(() {
-              _webViewHeight = (scrollHeight + 10.0);
-              // print('webViewHeight set to $_webViewHeight');
-            });
+            final size = MediaQuery.of(context).size;
+            // print('size: ${size.height}x${size.width}');
+            if (_isHtmlMessage &&
+                scrollWidth != null &&
+                scrollWidth > size.width + 10.0) {
+              var scale = (size.width / scrollWidth);
+              // print(
+              //     'scale=$scale: scrollWidth=$scrollWidth, available=${size.width}');
+              _webViewWidth = scrollWidth;
+              final callback = widget.config.onZoomed;
+              if (callback != null) {
+                callback(_controller, scale);
+              }
+            } else {
+              _webViewWidth = null;
+            }
+            final scrollHeightWithBuffer = scrollHeight + 10.0;
+            if (mounted && _webViewHeight != scrollHeightWithBuffer) {
+              setState(() {
+                _webViewHeight = scrollHeightWithBuffer;
+                _isLoading = false;
+                // print('webViewHeight set to $_webViewHeight');
+                // print('webViewWidth set to $_webViewWidth');
+              });
+            }
           }
+        }
+        if (mounted && _isLoading) {
+          setState(() {
+            _isLoading = false;
+          });
         }
       },
       navigationDelegate: _onNavigation,
