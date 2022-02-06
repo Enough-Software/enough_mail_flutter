@@ -328,7 +328,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
               const minScale = 0.5;
               if (scale < minScale) {
                 scale = minScale;
-                scrollWidth = scale * size.width;
+                scrollWidth = size.width / minScale;
               }
               _webViewWidth = scrollWidth;
               final callback = widget.config.onZoomed;
@@ -461,8 +461,9 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
             return ConstrainedBox(
               constraints: constraints,
               child: ImageInteractiveMedia(
-                  mediaProvider: MimeMediaProviderFactory.fromMime(
-                      widget.config.mimeMessage, widget.config.mimeMessage)),
+                mediaProvider: MimeMediaProviderFactory.fromMime(
+                    widget.config.mimeMessage, widget.config.mimeMessage),
+              ),
             );
           },
         ),
