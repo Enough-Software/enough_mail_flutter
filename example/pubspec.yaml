@@ -21,7 +21,6 @@ dependencies:
     git:
       url: https://github.com/Enough-Software/enough_mail_flutter.git
     # path: ../
-  webview_flutter: ^1.0.7
   url_launcher: ^5.7.10
 
 

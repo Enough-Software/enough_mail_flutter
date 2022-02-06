@@ -128,10 +128,14 @@ class _HtmlGenerationArguments {
 }
 
 class _HtmlGenerationResult {
-  const _HtmlGenerationResult.success(this.html) : errorDetails = null;
+  const _HtmlGenerationResult.success(this.base64Html, this.html)
+      : errorDetails = null;
 
-  const _HtmlGenerationResult.error(this.errorDetails) : html = null;
+  const _HtmlGenerationResult.error(this.errorDetails)
+      : base64Html = null,
+        html = null;
 
+  final String? base64Html;
   final String? html;
   final String? errorDetails;
 }
@@ -146,6 +150,7 @@ class _HtmlMimeMessageViewer extends StatefulWidget {
 }
 
 class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
+  String? _base64HtmlData;
   String? _htmlData;
   bool? _wereExternalImagesBlocked;
   bool _isGenerating = false;
@@ -180,8 +185,9 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       blockExternalImages: blockExternalImages,
     );
     final result = await compute(_generateHtmlImpl, args);
+    _base64HtmlData = result.base64Html;
     _htmlData = result.html;
-    if (_htmlData == null) {
+    if (_base64HtmlData == null) {
       final onError = widget.config.onError;
       if (onError != null) {
         onError(result.errorDetails, null);
@@ -211,7 +217,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         base64: true,
       ).toString();
 
-      return _HtmlGenerationResult.success(base64Html);
+      return _HtmlGenerationResult.success(base64Html, html);
     } catch (e, s) {
       print('ERROR: unable to transform mime message to HTML: $e $s');
       final errorDetails = '$e\n\n$s';
@@ -257,35 +263,31 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
             child: _buildWebView(),
           ),
         );
+      } else {
+        return SizedBox(
+          width: width,
+          height: height,
+          child: _buildWebViewWithLoadingIndicator(),
+        );
       }
-      return SizedBox(
-        height: height,
-        width: size.width,
-        child: _buildWebViewWithLoadingIndicator(),
-      );
     } else {
       return _buildWebViewWithLoadingIndicator();
     }
   }
 
-  Widget _buildWebViewWithLoadingIndicator() {
-    if (_isLoading) {
-      return Stack(
+  Widget _buildWebViewWithLoadingIndicator() => Stack(
         children: [
           _buildWebView(),
-          const Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: PlatformProgressIndicator(),
-            ),
-          )
+          if (_isLoading)
+            const Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: PlatformProgressIndicator(),
+              ),
+            )
         ],
       );
-    } else {
-      return _buildWebView();
-    }
-  }
 
   Widget _buildWebView() {
     final htmlData = _htmlData;
@@ -294,13 +296,19 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     }
     return WebView(
       key: ValueKey(htmlData),
-      initialUrl: htmlData,
       javascriptMode: JavascriptMode.unrestricted,
-      onWebViewCreated: (controller) {
+      onWebViewCreated: (controller) async {
         _controller = controller;
+        if (kDebugMode) {
+          print('loading html $htmlData');
+        }
+        await controller.loadHtmlString(htmlData, baseUrl: null);
         widget.config.onWebViewCreated?.call(controller);
       },
       onPageFinished: (url) async {
+        if (kDebugMode) {
+          print('onPageFinished $url');
+        }
         if (widget.config.adjustHeight) {
           final scrollHeightText = await _controller
               .runJavascriptReturningResult('document.body.scrollHeight');
@@ -309,14 +317,19 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           final scrollWidthText = await _controller
               .runJavascriptReturningResult('document.body.scrollWidth');
           // print('scrollWidth: $scrollWidthText');
-          final scrollWidth = double.tryParse(scrollWidthText);
+          var scrollWidth = double.tryParse(scrollWidthText);
           if (scrollHeight != null && mounted) {
             final size = MediaQuery.of(context).size;
             // print('size: ${size.height}x${size.width}');
             if (_isHtmlMessage &&
                 scrollWidth != null &&
                 scrollWidth > size.width + 10.0) {
-              final scale = size.width / scrollWidth;
+              var scale = size.width / scrollWidth;
+              const minScale = 0.5;
+              if (scale < minScale) {
+                scale = minScale;
+                scrollWidth = scale * size.width;
+              }
               _webViewWidth = scrollWidth;
               final callback = widget.config.onZoomed;
               if (callback != null) {
@@ -358,6 +371,13 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
   FutureOr<NavigationDecision> _onNavigation(
       NavigationRequest navigation) async {
+    if (kDebugMode) {
+      print('onNavigation $navigation');
+    }
+    // for iOS / WKWebView necessary:
+    if (navigation.isForMainFrame && navigation.url == 'about:blank') {
+      return NavigationDecision.navigate;
+    }
     final requestUri = Uri.parse(navigation.url);
     final mimeMessage = widget.config.mimeMessage;
     final mailtoHandler = widget.config.mailtoDelegate;
