@@ -281,10 +281,14 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     if (htmlData == null) {
       return Container();
     }
+    final theme = Theme.of(context);
+    final backgroundColor = theme.brightness == Brightness.dark
+        ? theme.colorScheme.background
+        : null;
     return WebView(
       key: ValueKey(htmlData),
       javascriptMode: JavascriptMode.unrestricted,
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: backgroundColor,
       onWebViewCreated: (controller) async {
         _controller = controller;
         if (kDebugMode) {
