@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
@@ -8,8 +7,8 @@ import 'package:enough_media/enough_media.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
-import 'package:webview_flutter/webview_flutter.dart';
 
 import 'mime_media_provider.dart';
 import 'progress_indicator.dart';
@@ -63,7 +62,7 @@ class MimeMessageViewer extends StatelessWidget {
 
   /// Handler for mailto: links.
   ///
-  /// Typically you will want to open a new compose view prepulated with
+  /// Typically you will want to open a new compose view pre-populated with
   /// a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
 
@@ -75,13 +74,14 @@ class MimeMessageViewer extends StatelessWidget {
   /// Returns `true` when the given `url` was handled.
   final Future<bool> Function(String url)? urlLauncherDelegate;
 
-  /// Register this callback if you want a reference to the [WebViewController].
-  final void Function(WebViewController controller)? onWebViewCreated;
+  /// Register this callback
+  /// to get a reference to the [InAppWebViewController].
+  final void Function(InAppWebViewController controller)? onWebViewCreated;
 
   /// This callback will be called when the webview zooms out after loading.
   ///
   /// Usually this is a sign that the user might want to zoom in again.
-  final void Function(WebViewController controller, double zoomFactor)?
+  final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
 
   /// Is notified about any errors that might occur
@@ -152,11 +152,10 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   Widget? _mediaView;
 
   double? _webViewHeight;
-  double? _webViewWidth;
   bool _isHtmlMessage = true;
   bool _isLoading = true;
 
-  late WebViewController _controller;
+  late InAppWebViewController _controller;
 
   @override
   void initState() {
@@ -240,23 +239,11 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
     if (widget.config.adjustHeight) {
       final size = MediaQuery.of(context).size;
-      final width = _webViewWidth;
       final height = _webViewHeight ?? size.height;
-      if (width != null) {
-        return FittedBox(
-          child: SizedBox(
-            width: width,
-            height: height,
-            child: _buildWebView(),
-          ),
-        );
-      } else {
-        return SizedBox(
-          width: width,
-          height: height,
-          child: _buildWebViewWithLoadingIndicator(),
-        );
-      }
+      return SizedBox(
+        height: height,
+        child: _buildWebViewWithLoadingIndicator(),
+      );
     } else {
       return _buildWebViewWithLoadingIndicator();
     }
@@ -281,54 +268,56 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     if (htmlData == null) {
       return Container();
     }
-    final theme = Theme.of(context);
-    final backgroundColor = theme.brightness == Brightness.dark
-        ? theme.colorScheme.background
-        : null;
-    return WebView(
+    // final theme = Theme.of(context);
+    // final backgroundColor = theme.brightness == Brightness.dark
+    //     ? theme.colorScheme.background
+    //     : null;
+    return InAppWebView(
       key: ValueKey(htmlData),
-      javascriptMode: JavascriptMode.unrestricted,
-      backgroundColor: backgroundColor,
+      initialOptions: InAppWebViewGroupOptions(
+        crossPlatform: InAppWebViewOptions(
+          useShouldOverrideUrlLoading: true,
+          transparentBackground: true,
+        ),
+        ios: IOSInAppWebViewOptions(),
+        android: AndroidInAppWebViewOptions(
+          forceDark: widget.config.enableDarkMode
+              ? AndroidForceDark.FORCE_DARK_ON
+              : AndroidForceDark.FORCE_DARK_OFF,
+        ),
+      ),
       onWebViewCreated: (controller) async {
         _controller = controller;
         if (kDebugMode) {
           print('loading html $htmlData');
         }
-        await controller.loadHtmlString(htmlData, baseUrl: null);
+        await controller.loadData(data: htmlData, baseUrl: null);
         widget.config.onWebViewCreated?.call(controller);
       },
-      onPageFinished: (url) async {
+      onLoadStop: (controller, uri) async {
         if (kDebugMode) {
-          print('onPageFinished $url');
+          print('onPageFinished $uri');
         }
         if (widget.config.adjustHeight) {
-          final scrollHeightText = await _controller
-              .runJavascriptReturningResult('document.body.scrollHeight');
-          final scrollHeight = double.tryParse(scrollHeightText);
-          // print('scrollHeight: $scrollHeightText');
-          final scrollWidthText = await _controller
-              .runJavascriptReturningResult('document.body.scrollWidth');
-          // print('scrollWidth: $scrollWidthText');
-          var scrollWidth = double.tryParse(scrollWidthText);
-          if (scrollHeight != null && mounted) {
+          final scrollHeight = await controller.evaluateJavascript(
+              source: 'document.body.scrollHeight');
+          var scrollWidth = await controller.evaluateJavascript(
+              source: 'document.body.scrollWidth');
+          if (mounted) {
             final size = MediaQuery.of(context).size;
             // print('size: ${size.height}x${size.width}');
-            if (_isHtmlMessage &&
-                scrollWidth != null &&
-                scrollWidth > size.width + 10.0) {
+            if (_isHtmlMessage && scrollWidth > size.width + 10.0) {
               var scale = size.width / scrollWidth;
               const minScale = 0.5;
               if (scale < minScale) {
                 scale = minScale;
                 scrollWidth = size.width / minScale;
               }
-              _webViewWidth = scrollWidth;
+              await controller.zoomBy(zoomFactor: scale, animated: true);
               final callback = widget.config.onZoomed;
               if (callback != null) {
-                callback(_controller, scale);
+                callback(controller, scale);
               }
-            } else {
-              _webViewWidth = null;
             }
             final scrollHeightWithBuffer = scrollHeight + 10.0;
             if (mounted && _webViewHeight != scrollHeightWithBuffer) {
@@ -347,35 +336,37 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           });
         }
       },
-      navigationDelegate: _onNavigation,
+      shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
       gestureRecognizers: widget.config.adjustHeight
           ? {
               Factory<LongPressGestureRecognizer>(
-                  () => LongPressGestureRecognizer()),
-              // The scale gesture recognizer interferes with
-              // scrolling on Flutter 2.2
-              // Factory<ScaleGestureRecognizer>(() =>
-              // ScaleGestureRecognizer()),
+                () => LongPressGestureRecognizer(),
+              ),
             }
           : null,
     );
   }
 
-  FutureOr<NavigationDecision> _onNavigation(
-      NavigationRequest navigation) async {
+  Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
+      InAppWebViewController controller,
+      NavigationAction navigationAction) async {
     if (kDebugMode) {
-      print('onNavigation $navigation');
+      print('onNavigation $navigationAction');
+    }
+    final requestUri = navigationAction.request.url;
+    if (requestUri == null) {
+      return NavigationActionPolicy.ALLOW;
     }
     // for iOS / WKWebView necessary:
-    if (navigation.isForMainFrame && navigation.url == 'about:blank') {
-      return NavigationDecision.navigate;
+    if (navigationAction.isForMainFrame &&
+        requestUri.toString() == 'about:blank') {
+      return NavigationActionPolicy.ALLOW;
     }
-    final requestUri = Uri.parse(navigation.url);
     final mimeMessage = widget.config.mimeMessage;
     final mailtoHandler = widget.config.mailtoDelegate;
     if (mailtoHandler != null && requestUri.isScheme('mailto')) {
       await mailtoHandler(requestUri, mimeMessage);
-      return NavigationDecision.prevent;
+      return NavigationActionPolicy.CANCEL;
     }
     if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
       // show inline part:
@@ -398,21 +389,21 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           });
         }
       }
-      return NavigationDecision.prevent;
+      return NavigationActionPolicy.CANCEL;
     }
-    final url = navigation.url;
+    final url = requestUri.toString();
     final urlDelegate = widget.config.urlLauncherDelegate;
     if (urlDelegate != null) {
       final handled = await urlDelegate(url);
       if (handled) {
-        return NavigationDecision.prevent;
+        return NavigationActionPolicy.CANCEL;
       }
     }
     //if (await launcher.canLaunch(url)) {
     // not checking due to
     // https://github.com/flutter/flutter/issues/93765#issuecomment-1018994962
-    await launcher.launch(url);
-    return NavigationDecision.prevent;
+    await launcher.launchUrl(requestUri);
+    return NavigationActionPolicy.CANCEL;
     // } else {
     //   return NavigationDecision.navigate;
     // }

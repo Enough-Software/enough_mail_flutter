@@ -7,21 +7,27 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  enough_mail: ^2.0.0
+  enough_mail_flutter: ^2.0.0
+  enough_mail_html: ^2.0.0
   flutter:
     sdk: flutter
-  enough_mail: #^0.1.0
-    git:
-      url: https://github.com/Enough-Software/enough_mail.git
-    # path: ../enough_mail
-  enough_mail_html: #^0.2.1
-    git:
-      url: https://github.com/Enough-Software/enough_mail_html.git
-    # path: ../enough_mail_html
-  enough_mail_flutter: #^0.3.0
-    git:
-      url: https://github.com/Enough-Software/enough_mail_flutter.git
-    # path: ../
   url_launcher: ^5.7.10
+
+dependency_overrides:
+  # out-comment the following to enable local development:
+  # enough_mail:
+  #   git:
+  #     url: https://github.com/Enough-Software/enough_mail.git
+  #   path: ../enough_mail
+  # enough_mail_html:
+  #   git:
+  #     url: https://github.com/Enough-Software/enough_mail_html.git
+  #   path: ../enough_mail_html
+  # enough_mail_flutter: ^2.0.0
+  #   git:
+  #     url: https://github.com/Enough-Software/enough_mail_flutter.git
+  #   path: ../
 
 
 dev_dependencies:

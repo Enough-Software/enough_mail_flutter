@@ -2,7 +2,7 @@ import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_media/enough_media.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'mime_message_viewer.dart';
 import 'progress_indicator.dart';
@@ -49,7 +49,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// what the message size is.
   final int maxDownloadSize;
 
-  /// The maxmimum image width for inline images
+  /// The maximum image width for inline images
   final int? maxImageWidth;
 
   /// The error message to be shown when message downloading failed
@@ -96,12 +96,12 @@ class MimeMessageDownloader extends StatefulWidget {
   final Future<bool> Function(String url)? urlLauncherDelegate;
 
   /// Register this callback if you want a reference to the [WebViewController].
-  final void Function(WebViewController controller)? onWebViewCreated;
+  final void Function(InAppWebViewController controller)? onWebViewCreated;
 
   /// This callback will be called when the webview zooms out after loading.
   ///
   /// Usually this is a sign that the user might want to zoom in again.
-  final void Function(WebViewController controller, double zoomFactor)?
+  final void Function(InAppWebViewController controller, double zoomFactor)?
       onZoomed;
 
   /// Is notified about any errors that might occur
