@@ -1,3 +1,10 @@
+## [2.0.0] - 2022-05-18
+- New `preferPlainText` option to display the mime message's plain text part when available.
+- New `enableDarkMode` option to use dark mode rendering.
+- New `urlLauncherDelegate` option to control opening of links.  
+- Ensure compatibility with Flutter 3.0.
+
+
 ## [1.4.0] - 2021-07-31
 - Register a `builder` function to overtake building for specific messages.
 

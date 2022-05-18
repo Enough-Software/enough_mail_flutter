@@ -58,13 +58,19 @@ void onMessageDownloaded(MimeMessage mimeMessage) {
 ```
 
 ## Installation
-Add this dependency your pubspec.yaml file:
+Add this dependency your `pubspec.yaml` file:
 
 ```
 dependencies:
-  enough_mail_flutter: ^1.3.0
+  enough_mail_flutter: ^2.0.0
 ```
 The latest version or `enough_mail_flutter` is [![enough_mail_flutter version](https://img.shields.io/pub/v/enough_mail_flutter.svg)](https://pub.dartlang.org/packages/enough_mail_flutter).
+
+Note: you might need to set a dependency override for the xml package:
+```
+dependency_overrides:
+  xml: ^6.0.1
+```
 
 
 ## Features and bugs
