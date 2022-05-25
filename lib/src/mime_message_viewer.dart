@@ -74,8 +74,7 @@ class MimeMessageViewer extends StatelessWidget {
   /// Returns `true` when the given `url` was handled.
   final Future<bool> Function(String url)? urlLauncherDelegate;
 
-  /// Register this callback
-  /// to get a reference to the [InAppWebViewController].
+  /// Retrieve a reference to the [InAppWebViewController].
   final void Function(InAppWebViewController controller)? onWebViewCreated;
 
   /// This callback will be called when the webview zooms out after loading.
@@ -181,10 +180,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     final result = await compute(_generateHtmlImpl, args);
     _htmlData = result.html;
     if (_htmlData == null) {
-      final onError = widget.config.onError;
-      if (onError != null) {
-        onError(result.errorDetails, null);
-      }
+      widget.config.onError?.call(result.errorDetails, null);
     }
     if (mounted) {
       setState(() {

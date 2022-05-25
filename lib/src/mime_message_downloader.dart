@@ -15,10 +15,12 @@ class MimeMessageDownloader extends StatefulWidget {
     Key? key,
     required this.mimeMessage,
     required this.mailClient,
+    this.fetchMessageContents,
     this.maxDownloadSize = 128 * 1024,
     this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
     this.markAsSeen = false,
+    this.downloadTimeout,
     this.includedInlineTypes,
     this.onDownloaded,
     this.adjustHeight = true,
@@ -41,6 +43,16 @@ class MimeMessageDownloader extends StatefulWidget {
   /// The high level mail client to download message contents
   final MailClient mailClient;
 
+  /// The optional alternative message loader,
+  /// for example to load the message from disk
+  final Future<MimeMessage> Function(
+    MimeMessage message, {
+    int? maxSize,
+    bool markAsSeen,
+    List<MediaToptype>? includedInlineTypes,
+    Duration? responseTimeout,
+  })? fetchMessageContents;
+
   /// The maximum size in bytes of messages that are fully downloaded.
   /// The defaults to `128*1024` / `128kb`.
   ///
@@ -60,6 +72,9 @@ class MimeMessageDownloader extends StatefulWidget {
 
   /// Optional list of media types to be shown inline
   final List<MediaToptype>? includedInlineTypes;
+
+  /// The optional timeout for the download operation
+  final Duration? downloadTimeout;
 
   /// Callback to get informed when the message has been downloaded
   final void Function(MimeMessage message)? onDownloaded;
@@ -95,7 +110,7 @@ class MimeMessageDownloader extends StatefulWidget {
   /// Returns `true` when the given `url` was handled.
   final Future<bool> Function(String url)? urlLauncherDelegate;
 
-  /// Register this callback if you want a reference to the [WebViewController].
+  /// Retrieve a reference to the [InAppWebViewController].
   final void Function(InAppWebViewController controller)? onWebViewCreated;
 
   /// This callback will be called when the webview zooms out after loading.
@@ -181,29 +196,28 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   Future<MimeMessage> _downloadMessageContents() async {
     try {
       // print('download message UID ${mimeMessage.uid} for state $this');
-      mimeMessage = await widget.mailClient.fetchMessageContents(
+      final fetchCall =
+          widget.fetchMessageContents ?? widget.mailClient.fetchMessageContents;
+
+      mimeMessage = await fetchCall(
         widget.mimeMessage,
         maxSize: widget.maxDownloadSize,
         markAsSeen: widget.markAsSeen,
         includedInlineTypes: widget.includedInlineTypes,
+        responseTimeout: widget.downloadTimeout,
       );
-
-      if (widget.onDownloaded != null) {
-        widget.onDownloaded!(mimeMessage);
-      }
+      widget.onDownloaded?.call(mimeMessage);
     } on MailException catch (e, s) {
-      if (widget.onError != null) {
-        widget.onError!(e, s);
-      } else {
+      widget.onError?.call(e, s);
+      if (widget.onError == null) {
         print('Unable to download message '
             '${widget.mimeMessage.decodeSubject()}: $e $s');
       }
     } catch (e, s) {
-      print(
-          'unexpected exception while downloading message with UID ${widget.mimeMessage.uid} / ID ${widget.mimeMessage.sequenceId}: $e $s');
-      if (widget.onError != null) {
-        widget.onError!(e, s);
-      }
+      print('unexpected exception while downloading message with '
+          'UID ${widget.mimeMessage.uid} / '
+          'ID ${widget.mimeMessage.sequenceId}: $e $s');
+      widget.onError?.call(e, s);
     }
     return mimeMessage;
   }
