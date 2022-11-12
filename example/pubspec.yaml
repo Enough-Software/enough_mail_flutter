@@ -12,7 +12,7 @@ dependencies:
   enough_mail_html: ^2.0.0
   flutter:
     sdk: flutter
-  url_launcher: ^5.7.10
+  url_launcher: ^6.1.6
 
 dependency_overrides:
   # out-comment the following to enable local development:
