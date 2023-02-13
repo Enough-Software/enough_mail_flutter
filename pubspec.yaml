@@ -13,7 +13,7 @@ dependencies:
   enough_media: ^2.2.0
   flutter:
     sdk: flutter
-  flutter_inappwebview: ^5.4.3+7
+  flutter_inappwebview: ^6.0.0-beta.22
   url_launcher: ^6.1.2
 
 dependency_overrides:
