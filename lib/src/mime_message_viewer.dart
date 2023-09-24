@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:enough_mail/enough_mail.dart';
 import 'package:enough_mail_html/enough_mail_html.dart';
@@ -154,8 +153,6 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   bool _isHtmlMessage = true;
   bool _isLoading = true;
 
-  late InAppWebViewController _controller;
-
   @override
   void initState() {
     _generateHtml(widget.config.blockExternalImages,
@@ -262,28 +259,17 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   Widget _buildWebView() {
     final htmlData = _htmlData;
     if (htmlData == null) {
-      return Container();
+      return const SizedBox.shrink();
     }
-    // final theme = Theme.of(context);
-    // final backgroundColor = theme.brightness == Brightness.dark
-    //     ? theme.colorScheme.background
-    //     : null;
+
     return InAppWebView(
       key: ValueKey(htmlData),
-      initialOptions: InAppWebViewGroupOptions(
-        crossPlatform: InAppWebViewOptions(
-          useShouldOverrideUrlLoading: true,
-          transparentBackground: true,
-        ),
-        ios: IOSInAppWebViewOptions(),
-        android: AndroidInAppWebViewOptions(
-          forceDark: widget.config.enableDarkMode
-              ? AndroidForceDark.FORCE_DARK_ON
-              : AndroidForceDark.FORCE_DARK_OFF,
-        ),
+      initialSettings: InAppWebViewSettings(
+        useShouldOverrideUrlLoading: true,
+        transparentBackground: true,
+        forceDark: widget.config.enableDarkMode ? ForceDark.ON : ForceDark.AUTO,
       ),
       onWebViewCreated: (controller) async {
-        _controller = controller;
         if (kDebugMode) {
           print('loading html $htmlData');
         }

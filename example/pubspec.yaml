@@ -3,7 +3,7 @@ description: Example for enough_mail_flutter usage.
 homepage: https://github.com/enough-software/enough_mail_flutter
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: ">=2.12.0 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:
