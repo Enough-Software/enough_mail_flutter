@@ -1,3 +1,9 @@
+## [2.1.0] - 2023-10-05
+- Switch to inapp_webview 6 (beta)
+- Feat: support to specify own fetching method, Setting your own fetching method can be useful for downloading the message contents e.g. from disk. 
+- Feat: MimeMessageDownloader also support setting download timeouts now.
+
+
 ## [2.0.0] - 2022-05-18
 - New `preferPlainText` option to display the mime message's plain text part when available.
 - New `enableDarkMode` option to use dark mode rendering.
