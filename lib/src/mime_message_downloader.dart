@@ -14,8 +14,7 @@ class MimeMessageDownloader extends StatefulWidget {
   const MimeMessageDownloader({
     Key? key,
     required this.mimeMessage,
-    required this.mailClient,
-    this.fetchMessageContents,
+    required this.fetchMessageContents,
     this.maxDownloadSize = 128 * 1024,
     this.maxImageWidth,
     this.downloadErrorMessage = 'Unable to download message.',
@@ -40,18 +39,16 @@ class MimeMessageDownloader extends StatefulWidget {
   /// The partial MIME message
   final MimeMessage mimeMessage;
 
-  /// The high level mail client to download message contents
-  final MailClient mailClient;
-
-  /// The optional alternative message loader,
-  /// for example to load the message from disk
+  /// The required message loader, usually [MailClient.fetchMessageContents].
+  ///
+  /// Alternative load the message from disk or somewhere else.
   final Future<MimeMessage> Function(
     MimeMessage message, {
     int? maxSize,
     bool markAsSeen,
     List<MediaToptype>? includedInlineTypes,
     Duration? responseTimeout,
-  })? fetchMessageContents;
+  }) fetchMessageContents;
 
   /// The maximum size in bytes of messages that are fully downloaded.
   /// The defaults to `128*1024` / `128kb`.
@@ -98,7 +95,7 @@ class MimeMessageDownloader extends StatefulWidget {
 
   /// Handler for mailto: links.
   ///
-  /// Typically you will want to open a new compose view prepulated with
+  /// Typically you will want to open a new compose view pre-populated with
   /// a `MessageBuilder.prepareMailtoBasedMessage(uri,from)` instance.
   final Future Function(Uri mailto, MimeMessage mimeMessage)? mailtoDelegate;
 
@@ -196,10 +193,8 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
   Future<MimeMessage> _downloadMessageContents() async {
     try {
       // print('download message UID ${mimeMessage.uid} for state $this');
-      final fetchCall =
-          widget.fetchMessageContents ?? widget.mailClient.fetchMessageContents;
 
-      mimeMessage = await fetchCall(
+      mimeMessage = await widget.fetchMessageContents(
         widget.mimeMessage,
         maxSize: widget.maxDownloadSize,
         markAsSeen: widget.markAsSeen,
