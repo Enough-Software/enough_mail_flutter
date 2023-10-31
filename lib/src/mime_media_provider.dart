@@ -15,9 +15,13 @@ class MimeMediaProviderFactory {
         name.isNotEmpty) {
       mediaType = MediaType.guessFromFileName(name);
     }
+
     return mediaType.isText
         ? TextMediaProvider(
-            name, mediaType.text, mimePart.decodeContentText() ?? '')
+            name,
+            mediaType.text,
+            mimePart.decodeContentText() ?? '',
+          )
         : MemoryMediaProvider(
             name,
             mediaType.text,

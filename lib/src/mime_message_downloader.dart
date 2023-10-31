@@ -3,7 +3,9 @@ import 'package:enough_media/enough_media.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:logger/logger.dart';
 
+import 'logger.dart';
 import 'mime_message_viewer.dart';
 import 'progress_indicator.dart';
 
@@ -12,7 +14,7 @@ import 'progress_indicator.dart';
 class MimeMessageDownloader extends StatefulWidget {
   /// Creates a new message downloader widget
   const MimeMessageDownloader({
-    Key? key,
+    super.key,
     required this.mimeMessage,
     required this.fetchMessageContents,
     this.maxDownloadSize = 128 * 1024,
@@ -34,7 +36,8 @@ class MimeMessageDownloader extends StatefulWidget {
     this.onZoomed,
     this.onError,
     this.builder,
-  }) : super(key: key);
+    this.logger,
+  });
 
   /// The partial MIME message
   final MimeMessage mimeMessage;
@@ -127,8 +130,11 @@ class MimeMessageDownloader extends StatefulWidget {
   /// Should the plain text be used instead of the HTML text?
   final bool preferPlainText;
 
+  /// The logger used by the library
+  final Logger? logger;
+
   @override
-  _MimeMessageDownloaderState createState() => _MimeMessageDownloaderState();
+  State<MimeMessageDownloader> createState() => _MimeMessageDownloaderState();
 }
 
 class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
@@ -155,7 +161,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
             case ConnectionState.waiting:
             case ConnectionState.active:
               return const Padding(
-                padding: EdgeInsets.all(8.0),
+                padding: EdgeInsets.all(8),
                 child: Center(
                   child: PlatformProgressIndicator(),
                 ),
@@ -166,10 +172,12 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
               }
               break;
           }
+
           return _buildMessageContent();
         },
       );
     }
+
     return _buildMessageContent();
   }
 
@@ -188,6 +196,7 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
         onZoomed: widget.onZoomed,
         onError: widget.onError,
         builder: widget.builder,
+        logger: widget.logger,
       );
 
   Future<MimeMessage> _downloadMessageContents() async {
@@ -205,15 +214,25 @@ class _MimeMessageDownloaderState extends State<MimeMessageDownloader> {
     } on MailException catch (e, s) {
       widget.onError?.call(e, s);
       if (widget.onError == null) {
-        print('Unable to download message '
-            '${widget.mimeMessage.decodeSubject()}: $e $s');
+        (widget.logger ?? defaultLogger).e(
+          'Unable to download message '
+          '${widget.mimeMessage.decodeSubject()}: $e',
+          error: e,
+          stackTrace: s,
+        );
       }
     } catch (e, s) {
-      print('unexpected exception while downloading message with '
-          'UID ${widget.mimeMessage.uid} / '
-          'ID ${widget.mimeMessage.sequenceId}: $e $s');
+      (widget.logger ?? defaultLogger).e(
+        'unexpected exception while downloading message with '
+        'GUID ${widget.mimeMessage.guid} / '
+        'UID ${widget.mimeMessage.uid} / '
+        'ID ${widget.mimeMessage.sequenceId}: $e',
+        error: e,
+        stackTrace: s,
+      );
       widget.onError?.call(e, s);
     }
+
     return mimeMessage;
   }
 }

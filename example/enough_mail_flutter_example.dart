@@ -16,7 +16,6 @@ Widget buildViewerForMessage(MimeMessage mimeMessage, MailClient mailClient) =>
       mimeMessage: mimeMessage,
       mailClient: mailClient,
       onDownloaded: onMessageDownloaded,
-      blockExternalImages: false,
       mailtoDelegate: handleMailto,
     );
 
@@ -31,19 +30,20 @@ void onMessageDownloaded(MimeMessage mimeMessage) {
 Widget buildViewerForDownloadedMessage(MimeMessage mimeMessage) =>
     MimeMessageViewer(
       mimeMessage: mimeMessage,
-      blockExternalImages: false,
       mailtoDelegate: handleMailto,
     );
 
 /// Example implementation for a mailto delegate
 Future handleMailto(Uri mailto, MimeMessage mimeMessage) {
   // in reality you would get this from your account data
-  final fromAddress = MailAddress('My Name', 'email@domain.com');
+  const fromAddress = MailAddress('My Name', 'email@domain.com');
   final messageBuilder =
       MessageBuilder.prepareMailtoBasedMessage(mailto, fromAddress);
   // in reality navigate to compose screen, e.g.
-  // return locator<NavigationService>()
-  //     .push(Routes.mailCompose, arguments: messageBuilder);
+  // return GoRouter.of(context)
+  //     .pushNamed(Routes.mailCompose, extra: messageBuilder);
+  // ignore: avoid_print
   print('generated message: ${messageBuilder.buildMimeMessage()}');
+
   return Future.value();
 }

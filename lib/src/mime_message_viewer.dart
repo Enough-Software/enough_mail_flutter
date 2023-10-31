@@ -7,8 +7,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:logger/logger.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import 'logger.dart';
 import 'mime_media_provider.dart';
 import 'progress_indicator.dart';
 
@@ -16,7 +18,7 @@ import 'progress_indicator.dart';
 class MimeMessageViewer extends StatelessWidget {
   /// Creates a new mime message viewer
   const MimeMessageViewer({
-    Key? key,
+    super.key,
     required this.mimeMessage,
     this.adjustHeight = true,
     this.blockExternalImages = false,
@@ -31,7 +33,8 @@ class MimeMessageViewer extends StatelessWidget {
     this.onZoomed,
     this.onError,
     this.builder,
-  }) : super(key: key);
+    this.logger,
+  });
 
   /// The mime message that should be shown
   final MimeMessage mimeMessage;
@@ -90,6 +93,9 @@ class MimeMessageViewer extends StatelessWidget {
   final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
       builder;
 
+  /// The logger instance used by the library
+  final Logger? logger;
+
   @override
   Widget build(BuildContext context) {
     final callback = builder;
@@ -99,11 +105,10 @@ class MimeMessageViewer extends StatelessWidget {
         return builtWidget;
       }
     }
-    if (mimeMessage.mediaType.isImage) {
-      return _ImageMimeMessageViewer(config: this);
-    } else {
-      return _HtmlMimeMessageViewer(config: this);
-    }
+
+    return mimeMessage.mediaType.isImage
+        ? _ImageMimeMessageViewer(config: this)
+        : _HtmlMimeMessageViewer(config: this);
   }
 }
 
@@ -115,6 +120,7 @@ class _HtmlGenerationArguments {
     required this.enableDarkMode,
     required this.preferPlainText,
     required this.blockExternalImages,
+    required this.logger,
   });
 
   final MimeMessage mimeMessage;
@@ -123,6 +129,7 @@ class _HtmlGenerationArguments {
   final bool enableDarkMode;
   final String? emptyMessageText;
   final int? maxImageWidth;
+  final Logger logger;
 }
 
 class _HtmlGenerationResult {
@@ -135,8 +142,7 @@ class _HtmlGenerationResult {
 }
 
 class _HtmlMimeMessageViewer extends StatefulWidget {
-  const _HtmlMimeMessageViewer({Key? key, required this.config})
-      : super(key: key);
+  const _HtmlMimeMessageViewer({required this.config});
   final MimeMessageViewer config;
 
   @override
@@ -155,13 +161,19 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
   @override
   void initState() {
-    _generateHtml(widget.config.blockExternalImages,
-        widget.config.preferPlainText, widget.config.enableDarkMode);
+    _generateHtml(
+      widget.config.blockExternalImages,
+      widget.config.preferPlainText,
+      widget.config.enableDarkMode,
+    );
     super.initState();
   }
 
-  Future<void> _generateHtml(bool blockExternalImages, bool preferPlainText,
-      bool enableDarkMode) async {
+  Future<void> _generateHtml(
+    bool blockExternalImages,
+    bool preferPlainText,
+    bool enableDarkMode,
+  ) async {
     _wereExternalImagesBlocked = blockExternalImages;
     _isGenerating = true;
     final mimeMessage = widget.config.mimeMessage;
@@ -173,6 +185,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       preferPlainText: preferPlainText,
       enableDarkMode: enableDarkMode,
       blockExternalImages: blockExternalImages,
+      logger: widget.config.logger ?? defaultLogger,
     );
     final result = await compute(_generateHtmlImpl, args);
     _htmlData = result.html;
@@ -187,7 +200,8 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   }
 
   static _HtmlGenerationResult _generateHtmlImpl(
-      _HtmlGenerationArguments args) {
+    _HtmlGenerationArguments args,
+  ) {
     try {
       final html = args.mimeMessage.transformToHtml(
         blockExternalImages: args.blockExternalImages,
@@ -196,43 +210,56 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         emptyMessageText: args.emptyMessageText,
         maxImageWidth: args.maxImageWidth,
       );
+      args.logger.d(html);
+
       return _HtmlGenerationResult.success(html);
     } catch (e, s) {
-      print('ERROR: unable to transform mime message to HTML: $e $s');
+      args.logger.e(
+        'unable to transform mime message to HTML: $e',
+        error: e,
+        stackTrace: s,
+      );
       final errorDetails = '$e\n\n$s';
+
       return _HtmlGenerationResult.error(errorDetails);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_mediaView != null) {
+    final mediaView = _mediaView;
+    if (mediaView != null) {
       return WillPopScope(
-        child: _mediaView!,
+        child: mediaView,
         onWillPop: () {
           setState(() {
             _mediaView = null;
           });
+
           return Future.value(false);
         },
       );
     }
     if (_isGenerating) {
       return const Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(8),
         child: Center(
           child: PlatformProgressIndicator(),
         ),
       );
     }
     if (widget.config.blockExternalImages != _wereExternalImagesBlocked) {
-      _generateHtml(widget.config.blockExternalImages,
-          widget.config.preferPlainText, widget.config.enableDarkMode);
+      _generateHtml(
+        widget.config.blockExternalImages,
+        widget.config.preferPlainText,
+        widget.config.enableDarkMode,
+      );
     }
 
     if (widget.config.adjustHeight) {
       final size = MediaQuery.of(context).size;
       final height = _webViewHeight ?? size.height;
+
       return SizedBox(
         height: height,
         child: _buildWebViewWithLoadingIndicator(),
@@ -249,10 +276,10 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
             const Align(
               alignment: Alignment.topRight,
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16),
                 child: PlatformProgressIndicator(),
               ),
-            )
+            ),
         ],
       );
 
@@ -273,7 +300,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         if (kDebugMode) {
           print('loading html $htmlData');
         }
-        await controller.loadData(data: htmlData, baseUrl: null);
+        await controller.loadData(data: htmlData);
         widget.config.onWebViewCreated?.call(controller);
       },
       onLoadStop: (controller, uri) async {
@@ -281,13 +308,24 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           print('onPageFinished $uri');
         }
         if (widget.config.adjustHeight) {
-          final scrollHeight = await controller.evaluateJavascript(
-              source: 'document.body.scrollHeight');
-          var scrollWidth = await controller.evaluateJavascript(
-              source: 'document.body.scrollWidth');
+          final scrollHeightJs = await controller.evaluateJavascript(
+            source: 'document.body.scrollHeight',
+          );
+          final scrollHeight =
+              scrollHeightJs is num ? scrollHeightJs.toDouble() : 0.0;
+          final scrollWidthJs = await controller.evaluateJavascript(
+            source: 'document.body.scrollWidth',
+          );
+          var scrollWidth =
+              scrollWidthJs is num ? scrollWidthJs.toDouble() : 0.0;
           if (mounted) {
-            final size = MediaQuery.of(context).size;
-            // print('size: ${size.height}x${size.width}');
+            final size = MediaQuery.sizeOf(context);
+            (widget.config.logger ?? defaultLogger).d(
+              'detected scrollWidth: $scrollWidth, '
+              'scrollHeight: $scrollHeight, '
+              'available width: ${size.width} '
+              'available height: ${size.height}',
+            );
             if (_isHtmlMessage && scrollWidth > size.width + 10.0) {
               var scale = size.width / scrollWidth;
               const minScale = 0.5;
@@ -321,8 +359,8 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       shouldOverrideUrlLoading: _shouldOverrideUrlLoading,
       gestureRecognizers: widget.config.adjustHeight
           ? {
-              Factory<LongPressGestureRecognizer>(
-                () => LongPressGestureRecognizer(),
+              const Factory<LongPressGestureRecognizer>(
+                LongPressGestureRecognizer.new,
               ),
             }
           : null,
@@ -330,8 +368,9 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   }
 
   Future<NavigationActionPolicy?> _shouldOverrideUrlLoading(
-      InAppWebViewController controller,
-      NavigationAction navigationAction) async {
+    InAppWebViewController controller,
+    NavigationAction navigationAction,
+  ) async {
     if (kDebugMode) {
       print('onNavigation $navigationAction');
     }
@@ -348,6 +387,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     final mailtoHandler = widget.config.mailtoDelegate;
     if (mailtoHandler != null && requestUri.isScheme('mailto')) {
       await mailtoHandler(requestUri, mimeMessage);
+
       return NavigationActionPolicy.CANCEL;
     }
     if (requestUri.isScheme('cid') || requestUri.isScheme('fetch')) {
@@ -371,6 +411,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           });
         }
       }
+
       return NavigationActionPolicy.CANCEL;
     }
     final url = requestUri.toString();
@@ -385,6 +426,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     // not checking due to
     // https://github.com/flutter/flutter/issues/93765#issuecomment-1018994962
     await launcher.launchUrl(requestUri);
+
     return NavigationActionPolicy.CANCEL;
     // } else {
     //   return NavigationDecision.navigate;
@@ -393,8 +435,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 }
 
 class _ImageMimeMessageViewer extends StatefulWidget {
-  const _ImageMimeMessageViewer({Key? key, required this.config})
-      : super(key: key);
+  const _ImageMimeMessageViewer({required this.config});
 
   final MimeMessageViewer config;
 
@@ -417,33 +458,42 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
   Widget build(BuildContext context) {
     if (_showFullScreen) {
       final screenHeight = MediaQuery.of(context).size.height;
+
       return WillPopScope(
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (!constraints.hasBoundedHeight) {
               constraints = constraints.copyWith(maxHeight: screenHeight);
             }
+
             return ConstrainedBox(
               constraints: constraints,
               child: ImageInteractiveMedia(
                 mediaProvider: MimeMediaProviderFactory.fromMime(
-                    widget.config.mimeMessage, widget.config.mimeMessage),
+                  widget.config.mimeMessage,
+                  widget.config.mimeMessage,
+                ),
               ),
             );
           },
         ),
         onWillPop: () {
           setState(() => _showFullScreen = false);
+
           return Future.value(false);
         },
       );
     } else {
+      final imageData = _imageData;
+
       return TextButton(
         onPressed: () {
           final callback = widget.config.showMediaDelegate;
           if (callback != null) {
             final mediaProvider = MimeMediaProviderFactory.fromMime(
-                widget.config.mimeMessage, widget.config.mimeMessage);
+              widget.config.mimeMessage,
+              widget.config.mimeMessage,
+            );
             final mediaWidget =
                 InteractiveMediaWidget(mediaProvider: mediaProvider);
             callback(mediaWidget);
@@ -451,8 +501,8 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
             setState(() => _showFullScreen = true);
           }
         },
-        child: _imageData != null
-            ? Image.memory(_imageData!)
+        child: imageData != null
+            ? Image.memory(imageData)
             : const Text('no image data'),
       );
     }
