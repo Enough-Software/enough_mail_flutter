@@ -225,6 +225,8 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     }
   }
 
+  Logger get logger => widget.config.logger ?? defaultLogger;
+
   @override
   Widget build(BuildContext context) {
     final mediaView = _mediaView;
@@ -297,16 +299,12 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         forceDark: widget.config.enableDarkMode ? ForceDark.ON : ForceDark.AUTO,
       ),
       onWebViewCreated: (controller) async {
-        if (kDebugMode) {
-          print('loading html $htmlData');
-        }
         await controller.loadData(data: htmlData);
         widget.config.onWebViewCreated?.call(controller);
       },
       onLoadStop: (controller, uri) async {
-        if (kDebugMode) {
-          print('onPageFinished $uri');
-        }
+        logger.d('onPageFinished $uri');
+
         if (widget.config.adjustHeight) {
           final scrollHeightJs = await controller.evaluateJavascript(
             source: 'document.body.scrollHeight',
@@ -320,7 +318,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
               scrollWidthJs is num ? scrollWidthJs.toDouble() : 0.0;
           if (mounted) {
             final size = MediaQuery.sizeOf(context);
-            (widget.config.logger ?? defaultLogger).d(
+            logger.d(
               'detected scrollWidth: $scrollWidth, '
               'scrollHeight: $scrollHeight, '
               'available width: ${size.width} '
@@ -371,9 +369,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     InAppWebViewController controller,
     NavigationAction navigationAction,
   ) async {
-    if (kDebugMode) {
-      print('onNavigation $navigationAction');
-    }
+    logger.d('onNavigation $navigationAction');
     final requestUri = navigationAction.request.url;
     if (requestUri == null) {
       return NavigationActionPolicy.ALLOW;
