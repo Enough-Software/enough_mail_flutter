@@ -231,14 +231,12 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   Widget build(BuildContext context) {
     final mediaView = _mediaView;
     if (mediaView != null) {
-      return WillPopScope(
+      return PopScope(
         child: mediaView,
-        onWillPop: () {
+        onPopInvoked: (didPop) {
           setState(() {
             _mediaView = null;
           });
-
-          return Future.value(false);
         },
       );
     }
@@ -311,6 +309,9 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           );
           final scrollHeight =
               scrollHeightJs is num ? scrollHeightJs.toDouble() : 0.0;
+          if (!mounted) {
+            return;
+          }
           final scrollWidthJs = await controller.evaluateJavascript(
             source: 'document.body.scrollWidth',
           );
@@ -455,7 +456,10 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
     if (_showFullScreen) {
       final screenHeight = MediaQuery.of(context).size.height;
 
-      return WillPopScope(
+      return PopScope(
+        onPopInvoked: (didPop) {
+          setState(() => _showFullScreen = !didPop);
+        },
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (!constraints.hasBoundedHeight) {
@@ -473,11 +477,6 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
             );
           },
         ),
-        onWillPop: () {
-          setState(() => _showFullScreen = false);
-
-          return Future.value(false);
-        },
       );
     } else {
       final imageData = _imageData;
