@@ -231,13 +231,23 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   Widget build(BuildContext context) {
     final mediaView = _mediaView;
     if (mediaView != null) {
-      return PopScope(
+      return WillPopScope(
         child: mediaView,
-        onPopInvoked: (didPop) {
+        onWillPop: () {
           setState(() {
             _mediaView = null;
           });
+
+          return Future.value(true);
         },
+
+        // wait for https://github.com/flutter/flutter/issues/138525 before
+        // switching to PopScope
+        // onPopInvoked: (didPop) {
+        //   setState(() {
+        //     _mediaView = null;
+        //   });
+        // },
       );
     }
     if (_isGenerating) {
@@ -456,10 +466,17 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
     if (_showFullScreen) {
       final screenHeight = MediaQuery.of(context).size.height;
 
-      return PopScope(
-        onPopInvoked: (didPop) {
-          setState(() => _showFullScreen = !didPop);
+      return WillPopScope(
+        onWillPop: () {
+          setState(() => _showFullScreen = false);
+
+          return Future.value(true);
         },
+        // wait for https://github.com/flutter/flutter/issues/138525 before
+        // switching to PopScope
+        // onPopInvoked: (didPop) {
+        //   setState(() => _showFullScreen = !didPop);
+        // },
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (!constraints.hasBoundedHeight) {
