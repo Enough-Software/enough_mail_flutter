@@ -41,7 +41,7 @@ dependency_overrides:
 
 dev_dependencies:
   dart_code_metrics: 5.7.6
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
   flutter_test:
     sdk: flutter
 
