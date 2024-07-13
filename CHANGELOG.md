@@ -1,3 +1,7 @@
+## [2.1.1] - (2024-05-22)
+- Remove direct MailClient usage from MimeMessageDownloader
+- Update dependencies
+
 ## [2.1.0] - 2023-10-05
 - Switch to inapp_webview 6 (beta)
 - Feat: support to specify own fetching method, Setting your own fetching method can be useful for downloading the message contents e.g. from disk. 

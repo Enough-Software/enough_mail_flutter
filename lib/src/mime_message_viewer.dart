@@ -120,7 +120,6 @@ class _HtmlGenerationArguments {
     required this.enableDarkMode,
     required this.preferPlainText,
     required this.blockExternalImages,
-    required this.logger,
   });
 
   final MimeMessage mimeMessage;
@@ -129,7 +128,6 @@ class _HtmlGenerationArguments {
   final bool enableDarkMode;
   final String? emptyMessageText;
   final int? maxImageWidth;
-  final Logger logger;
 }
 
 class _HtmlGenerationResult {
@@ -185,13 +183,13 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
       preferPlainText: preferPlainText,
       enableDarkMode: enableDarkMode,
       blockExternalImages: blockExternalImages,
-      logger: widget.config.logger ?? defaultLogger,
     );
     final result = await compute(_generateHtmlImpl, args);
     _htmlData = result.html;
     if (_htmlData == null) {
       widget.config.onError?.call(result.errorDetails, null);
     }
+    widget.config.logger?.d('generated html: $_htmlData');
     if (mounted) {
       setState(() {
         _isGenerating = false;
@@ -210,14 +208,11 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
         emptyMessageText: args.emptyMessageText,
         maxImageWidth: args.maxImageWidth,
       );
-      args.logger.d(html);
 
       return _HtmlGenerationResult.success(html);
     } catch (e, s) {
-      args.logger.e(
+      debugPrint(
         'unable to transform mime message to HTML: $e',
-        error: e,
-        stackTrace: s,
       );
       final errorDetails = '$e\n\n$s';
 
