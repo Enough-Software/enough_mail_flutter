@@ -1,5 +1,5 @@
 /// UI components useful for displaying email mime messages
-library enough_mail_flutter;
+library;
 
 export 'package:enough_mail_html/enough_mail_html.dart';
 export 'package:enough_media/enough_media.dart';

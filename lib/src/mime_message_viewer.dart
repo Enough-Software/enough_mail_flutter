@@ -83,7 +83,7 @@ class MimeMessageViewer extends StatelessWidget {
   ///
   /// Usually this is a sign that the user might want to zoom in again.
   final void Function(InAppWebViewController controller, double zoomFactor)?
-      onZoomed;
+  onZoomed;
 
   /// Is notified about any errors that might occur
   final void Function(Object? exception, StackTrace? stackTrace)? onError;
@@ -91,7 +91,7 @@ class MimeMessageViewer extends StatelessWidget {
   /// With a builder you can take over the rendering
   /// for certain messages or mime types.
   final Widget? Function(BuildContext context, MimeMessage mimeMessage)?
-      builder;
+  builder;
 
   /// The logger instance used by the library
   final Logger? logger;
@@ -211,9 +211,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
 
       return _HtmlGenerationResult.success(html);
     } catch (e, s) {
-      debugPrint(
-        'unable to transform mime message to HTML: $e',
-      );
+      debugPrint('unable to transform mime message to HTML: $e');
       final errorDetails = '$e\n\n$s';
 
       return _HtmlGenerationResult.error(errorDetails);
@@ -248,9 +246,7 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
     if (_isGenerating) {
       return const Padding(
         padding: EdgeInsets.all(8),
-        child: Center(
-          child: PlatformProgressIndicator(),
-        ),
+        child: Center(child: PlatformProgressIndicator()),
       );
     }
     if (widget.config.blockExternalImages != _wereExternalImagesBlocked) {
@@ -275,18 +271,18 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
   }
 
   Widget _buildWebViewWithLoadingIndicator() => Stack(
-        children: [
-          _buildWebView(),
-          if (_isLoading)
-            const Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: PlatformProgressIndicator(),
-              ),
-            ),
-        ],
-      );
+    children: [
+      _buildWebView(),
+      if (_isLoading)
+        const Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: PlatformProgressIndicator(),
+          ),
+        ),
+    ],
+  );
 
   Widget _buildWebView() {
     final htmlData = _htmlData;
@@ -312,16 +308,18 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           final scrollHeightJs = await controller.evaluateJavascript(
             source: 'document.body.scrollHeight',
           );
-          final scrollHeight =
-              scrollHeightJs is num ? scrollHeightJs.toDouble() : 0.0;
+          final scrollHeight = scrollHeightJs is num
+              ? scrollHeightJs.toDouble()
+              : 0.0;
           if (!mounted) {
             return;
           }
           final scrollWidthJs = await controller.evaluateJavascript(
             source: 'document.body.scrollWidth',
           );
-          var scrollWidth =
-              scrollWidthJs is num ? scrollWidthJs.toDouble() : 0.0;
+          var scrollWidth = scrollWidthJs is num
+              ? scrollWidthJs.toDouble()
+              : 0.0;
           if (mounted) {
             final size = MediaQuery.sizeOf(context);
             logger.d(
@@ -399,8 +397,10 @@ class _HtmlViewerState extends State<_HtmlMimeMessageViewer> {
           ? mimeMessage.getPartWithContentId(cid)
           : mimeMessage.getPart(cid);
       if (part != null) {
-        final mediaProvider =
-            MimeMediaProviderFactory.fromMime(mimeMessage, part);
+        final mediaProvider = MimeMediaProviderFactory.fromMime(
+          mimeMessage,
+          part,
+        );
         final mediaWidget = InteractiveMediaWidget(
           mediaProvider: mediaProvider,
         );
@@ -474,12 +474,12 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
         // },
         child: LayoutBuilder(
           builder: (context, constraints) {
-            if (!constraints.hasBoundedHeight) {
-              constraints = constraints.copyWith(maxHeight: screenHeight);
-            }
+            final effectiveConstraints = !constraints.hasBoundedHeight
+                ? constraints.copyWith(maxHeight: screenHeight)
+                : constraints;
 
             return ConstrainedBox(
-              constraints: constraints,
+              constraints: effectiveConstraints,
               child: ImageInteractiveMedia(
                 mediaProvider: MimeMediaProviderFactory.fromMime(
                   widget.config.mimeMessage,
@@ -501,8 +501,9 @@ class _ImageViewerState extends State<_ImageMimeMessageViewer> {
               widget.config.mimeMessage,
               widget.config.mimeMessage,
             );
-            final mediaWidget =
-                InteractiveMediaWidget(mediaProvider: mediaProvider);
+            final mediaWidget = InteractiveMediaWidget(
+              mediaProvider: mediaProvider,
+            );
             callback(mediaWidget);
           } else {
             setState(() => _showFullScreen = true);
